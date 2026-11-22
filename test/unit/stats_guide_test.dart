@@ -11,6 +11,8 @@ import 'package:levmaxreborn/model/daily_quest_state_model.dart';
 import 'package:levmaxreborn/model/grooming_item_model.dart';
 import 'package:levmaxreborn/model/quest_log_model.dart';
 import 'package:levmaxreborn/model/user_model.dart';
+import 'package:levmaxreborn/service/session_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:levmaxreborn/view/pages/guide_page.dart';
 import 'package:levmaxreborn/view/widgets/growth_line_chart.dart';
 import 'package:levmaxreborn/view/widgets/stat_radar_chart.dart';
@@ -36,6 +38,9 @@ void main() {
     await Hive.openBox<GroomingItemModel>(HiveBoxes.groomingItems);
     await Hive.openBox<DailyQuestStateModel>(HiveBoxes.dailyQuestStates);
 
+    SharedPreferences.setMockInitialValues({});
+    await SessionService.init();
+
     Get.testMode = true;
   });
 
@@ -48,6 +53,8 @@ void main() {
 
   setUp(() async {
     Get.reset();
+    SharedPreferences.setMockInitialValues({});
+    await SessionService.init();
     await Hive.box<UserModel>(HiveBoxes.users).clear();
     await Hive.box<QuestLogModel>(HiveBoxes.questLogs).clear();
 
@@ -321,6 +328,8 @@ void main() {
         title: 'PUSH UPS',
         completedAt: DateTime.now(),
         metricSummary: '20 REPS',
+        repsCount: 20,
+        exerciseName: 'Push Ups',
       );
       final log2 = QuestLogModel(
         id: 'cleaner_log_2',
@@ -329,6 +338,7 @@ void main() {
         title: 'CARDIO RUN',
         completedAt: DateTime.now(),
         metricSummary: '3.0 KM',
+        distanceKm: 3.0,
       );
 
       await Hive.box<QuestLogModel>(HiveBoxes.questLogs).put(log1.id, log1);
@@ -350,6 +360,11 @@ void main() {
       // Verify reactive list update
       expect(statsController.questLogs.length, equals(1));
       expect(statsController.questLogs.first.id, equals('cleaner_log_2'));
+
+      // Verify lifetime sejarah calculation remains preserved even after archive purge
+      expect(statsController.totalQuestsCleared.value, equals(2));
+      expect(statsController.cumulativeWorkoutReps['Push Ups'], equals(20));
+      expect(statsController.totalCardioKm.value, equals(3.0));
     });
   });
 

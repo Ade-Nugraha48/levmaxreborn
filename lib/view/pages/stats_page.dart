@@ -337,7 +337,7 @@ class StatsPage extends StatelessWidget {
       itemCount: stats.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 2.3,
+        childAspectRatio: 1.95,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
@@ -347,7 +347,7 @@ class StatsPage extends StatelessWidget {
         final strataColor = AppColors.colorForStrata(strata);
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: AppColors.surface,
             border: Border.all(color: AppColors.borderHairline, width: 1),
@@ -520,15 +520,20 @@ class StatsPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      log.title,
-                      style: AppTextStyles.cinzel(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        letterSpacing: 1.2,
+                    Expanded(
+                      child: Text(
+                        log.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cinzel(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 4),
                     Text(
                       '+${log.expGained} EXP',
                       style: AppTextStyles.dotGothic(
@@ -548,8 +553,11 @@ class StatsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 3,
                   children: [
                     Text(
                       formattedDate,

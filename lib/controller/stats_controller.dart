@@ -8,6 +8,7 @@ import '../../core/utils/date_helper.dart';
 import '../../model/quest_log_model.dart';
 import '../../model/user_model.dart';
 import '../../service/hive_service.dart';
+import '../../service/session_service.dart';
 import 'user_controller.dart';
 
 /// Controller for Screen 5 & 6: Stats (Attributes & Sejarah)
@@ -114,29 +115,46 @@ class StatsController extends GetxController {
     // 1. Longest Streak
     longestStreak.value = max(activeUser.longestStreak, activeUser.streakDays);
 
+    final username = activeUser.username;
+
     // 2. Total Cardio KM
-    double cardioDist = 0.0;
+    double cardioDistFromLogs = 0.0;
     for (final log in questLogs) {
       if (log.questType == 'cardio') {
-        cardioDist += log.distanceKm;
+        cardioDistFromLogs += log.distanceKm;
       }
     }
-    totalCardioKm.value = cardioDist;
+    final historicalCardio = SessionService.getLifetimeCardioKm(username);
+    final resolvedCardio = max(historicalCardio, cardioDistFromLogs);
+    if (resolvedCardio > historicalCardio) {
+      SessionService.setLifetimeCardioKm(username, resolvedCardio);
+    }
+    totalCardioKm.value = resolvedCardio;
 
     // 3. Total Study Hours
-    int studyMins = 0;
+    int studyMinsFromLogs = 0;
     for (final log in questLogs) {
       if (log.questType == 'study') {
-        studyMins += log.durationMinutes;
+        studyMinsFromLogs += log.durationMinutes;
       }
     }
-    totalStudyHours.value = studyMins / 60.0;
+    final historicalStudyMins = SessionService.getLifetimeStudyMinutes(username);
+    final resolvedStudyMins = max(historicalStudyMins, studyMinsFromLogs);
+    if (resolvedStudyMins > historicalStudyMins) {
+      SessionService.setLifetimeStudyMinutes(username, resolvedStudyMins);
+    }
+    totalStudyHours.value = resolvedStudyMins / 60.0;
 
     // 4. Quests Cleared
-    totalQuestsCleared.value = questLogs.length;
+    final historicalQuests = SessionService.getLifetimeQuestsCleared(username);
+    final resolvedQuests = max(historicalQuests, questLogs.length);
+    if (resolvedQuests > historicalQuests) {
+      SessionService.setLifetimeQuestsCleared(username, resolvedQuests);
+    }
+    totalQuestsCleared.value = resolvedQuests;
 
     // 5. Cumulative Workout Reps
-    final breakdown = <String, int>{
+    final repsFromLogs = <String, int>{
       'Push Ups': 0,
       'Squats': 0,
       'Sit Ups': 0,
@@ -150,22 +168,32 @@ class StatsController extends GetxController {
 
         if (exercise.toLowerCase().contains('push') ||
             title.toLowerCase().contains('push')) {
-          breakdown['Push Ups'] = (breakdown['Push Ups'] ?? 0) + reps;
+          repsFromLogs['Push Ups'] = (repsFromLogs['Push Ups'] ?? 0) + reps;
         } else if (exercise.toLowerCase().contains('squat') ||
             title.toLowerCase().contains('squat')) {
-          breakdown['Squats'] = (breakdown['Squats'] ?? 0) + reps;
+          repsFromLogs['Squats'] = (repsFromLogs['Squats'] ?? 0) + reps;
         } else if (exercise.toLowerCase().contains('sit') ||
             title.toLowerCase().contains('sit')) {
-          breakdown['Sit Ups'] = (breakdown['Sit Ups'] ?? 0) + reps;
+          repsFromLogs['Sit Ups'] = (repsFromLogs['Sit Ups'] ?? 0) + reps;
         } else if (exercise.toLowerCase().contains('pull') ||
             title.toLowerCase().contains('pull')) {
-          breakdown['Pull Ups'] = (breakdown['Pull Ups'] ?? 0) + reps;
+          repsFromLogs['Pull Ups'] = (repsFromLogs['Pull Ups'] ?? 0) + reps;
         }
       }
     }
-    cumulativeWorkoutReps.assignAll(breakdown);
+    final mergedBreakdown = <String, int>{};
+    for (final key in ['Push Ups', 'Squats', 'Sit Ups', 'Pull Ups']) {
+      final historicalReps =
+          SessionService.getLifetimeWorkoutReps(username, key);
+      final resolvedReps = max(historicalReps, repsFromLogs[key] ?? 0);
+      if (resolvedReps > historicalReps) {
+        SessionService.setLifetimeWorkoutReps(username, key, resolvedReps);
+      }
+      mergedBreakdown[key] = resolvedReps;
+    }
+    cumulativeWorkoutReps.assignAll(mergedBreakdown);
     maxWorkoutReps.value =
-        breakdown.values.isEmpty ? 0 : breakdown.values.reduce(max);
+        mergedBreakdown.values.isEmpty ? 0 : mergedBreakdown.values.reduce(max);
 
     // 6. Growth Snapshots
     if (activeUser.growthSnapshots.isEmpty) {

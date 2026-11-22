@@ -200,12 +200,18 @@ class GuidePage extends StatelessWidget {
         itemBuilder: (context, index) {
           final row = rows[index];
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      color: row.color,
+                    ),
+                    const SizedBox(width: 6),
                     Text(
                       row.name,
                       style: AppTextStyles.cinzel(
@@ -224,11 +230,12 @@ class GuidePage extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
                 Text(
                   row.rewardText,
                   style: AppTextStyles.dotGothic(
                     fontSize: 11,
-                    color: AppColors.textPrimary.withValues(alpha: 0.8),
+                    color: AppColors.textPrimary.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -309,11 +316,14 @@ class GuidePage extends StatelessWidget {
                     letterSpacing: 1.4,
                   ),
                 ),
-                Text(
-                  r.req,
-                  style: AppTextStyles.dotGothic(
-                    fontSize: 11,
-                    color: AppColors.textPrimary.withValues(alpha: 0.8),
+                Flexible(
+                  child: Text(
+                    r.req,
+                    textAlign: TextAlign.right,
+                    style: AppTextStyles.dotGothic(
+                      fontSize: 11,
+                      color: AppColors.textPrimary.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
               ],
@@ -342,7 +352,7 @@ class GuidePage extends StatelessWidget {
       itemCount: strataList.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 3.2,
+        childAspectRatio: 2.8,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
