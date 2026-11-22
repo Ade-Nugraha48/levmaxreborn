@@ -6,6 +6,7 @@ import '../../controller/user_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/game_config.dart';
+import '../../service/session_service.dart';
 import '../widgets/grid_background.dart';
 
 /// Screen 9: Workout Quest Execution Page
@@ -24,15 +25,24 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   late final int targetReps;
 
   int currentSet = 1;
-  late int reps;
+  int currentReps = 0;
   bool isResting = false;
   int restSecondsLeft = 30;
   Timer? _restTimer;
   bool isSubmitting = false;
+  int _totalRepsAccumulated = 0;
 
   @override
   void initState() {
     super.initState();
+    // Strictly ensure initial state starts at Set 1 and 0 reps
+    currentSet = 1;
+    currentReps = 0;
+    isResting = false;
+    restSecondsLeft = 30;
+    isSubmitting = false;
+    _totalRepsAccumulated = 0;
+
     final args = Get.arguments as Map<String, dynamic>?;
     exerciseName = args?['exercise'] as String? ?? 'Push Ups';
     workoutIndex = args?['exerciseIndex'] as int? ?? 0;
@@ -42,7 +52,6 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         GameConfig.rankTargets[rank] ?? GameConfig.rankTargets['Novice']!;
     totalSets = rankTarget.workoutSets;
     targetReps = rankTarget.repsPerExercise[exerciseName] ?? 10;
-    reps = targetReps;
   }
 
   @override
@@ -56,12 +65,15 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     setState(() {
       isResting = true;
       restSecondsLeft = 30;
+      currentReps = 0;
     });
 
-    if (Get.testMode) {
-      // In test mode, finish rest immediately
+    if (Get.testMode || SessionService.skipRestTimer) {
+      // In test mode or skipRestTimer demo mode, finish rest immediately
       setState(() {
         isResting = false;
+        restSecondsLeft = 0;
+        currentReps = 0;
       });
       return;
     }
@@ -75,6 +87,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         timer.cancel();
         setState(() {
           isResting = false;
+          restSecondsLeft = 0;
+          currentReps = 0;
         });
       }
     });
@@ -85,16 +99,21 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     setState(() {
       isResting = false;
       restSecondsLeft = 0;
+      currentReps = 0;
     });
   }
 
   Future<void> _handleCompleteSet() async {
     if (isSubmitting) return;
 
+    // Record reps completed in this set (if currentReps was dialed, use it; otherwise targetReps)
+    final repsForThisSet = currentReps > 0 ? currentReps : targetReps;
+    _totalRepsAccumulated += repsForThisSet;
+
     if (currentSet < totalSets) {
       setState(() {
         currentSet++;
-        reps = targetReps;
+        currentReps = 0; // Strictly reset reps to 0 for next set
       });
       _startRestTimer();
     } else {
@@ -103,7 +122,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         isSubmitting = true;
       });
 
-      final totalRepsCompleted = totalSets * reps;
+      final totalRepsCompleted = _totalRepsAccumulated;
       final result = await QuestController.to.completeQuest(
         type: QuestType.workout,
         exerciseName: exerciseName,
@@ -241,11 +260,14 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                         children: [
                           Row(
                             children: List.generate(totalSets, (index) {
+                              // Only previously completed sets are filled solid Cyan
                               final bool isCompleted = index < currentSet - 1;
                               final bool isCurrent = index == currentSet - 1;
-                              final Color segColor = isCompleted || isCurrent
+                              final Color segColor = isCompleted
                                   ? AppColors.secondary
-                                  : const Color(0xFF292A2F);
+                                  : (isCurrent && isResting
+                                      ? AppColors.primary
+                                      : const Color(0xFF292A2F));
 
                               return Expanded(
                                 child: Container(
@@ -255,7 +277,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: segColor,
-                                    boxShadow: isCompleted || isCurrent
+                                    boxShadow: isCompleted
                                         ? [
                                             BoxShadow(
                                               color: AppColors.secondary
@@ -325,8 +347,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                 // Decrement Button
                                 InkWell(
                                   onTap: () {
-                                    if (reps > 1) {
-                                      setState(() => reps--);
+                                    if (currentReps > 0) {
+                                      setState(() => currentReps--);
                                     }
                                   },
                                   borderRadius: BorderRadius.circular(4),
@@ -352,26 +374,27 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
 
                                 const SizedBox(width: 24),
 
-                                // Number Display
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: '$reps',
-                                        style: AppTextStyles.telemetryDotGothic(
-                                          fontSize: 54,
-                                          color: AppColors.textPrimary,
-                                        ).copyWith(fontWeight: FontWeight.bold),
+                                // Number Display (Starts at 0 / targetReps)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      '$currentReps',
+                                      style: AppTextStyles.telemetryDotGothic(
+                                        fontSize: 54,
+                                        color: AppColors.textPrimary,
+                                      ).copyWith(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      ' / $targetReps',
+                                      style: AppTextStyles.telemetryDotGothic(
+                                        fontSize: 20,
+                                        color: AppColors.textSecondary,
                                       ),
-                                      TextSpan(
-                                        text: ' / $targetReps',
-                                        style: AppTextStyles.telemetryDotGothic(
-                                          fontSize: 20,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
 
                                 const SizedBox(width: 24),
@@ -379,8 +402,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                 // Increment Button
                                 InkWell(
                                   onTap: () {
-                                    if (reps < 99) {
-                                      setState(() => reps++);
+                                    if (currentReps < 99) {
+                                      setState(() => currentReps++);
                                     }
                                   },
                                   borderRadius: BorderRadius.circular(4),
@@ -508,7 +531,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${currentSet * reps} REPS · BODYWEIGHT',
+                                    '${totalSets * targetReps} REPS · BODYWEIGHT',
                                     style: AppTextStyles.telemetryDotGothic(
                                       fontSize: 11,
                                       color: AppColors.textPrimary,

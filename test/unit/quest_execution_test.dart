@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
@@ -12,6 +13,7 @@ import 'package:levmaxreborn/model/grooming_item_model.dart';
 import 'package:levmaxreborn/model/quest_log_model.dart';
 import 'package:levmaxreborn/model/user_model.dart';
 import 'package:levmaxreborn/service/session_service.dart';
+import 'package:levmaxreborn/view/pages/workout_detail_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -302,6 +304,65 @@ void main() {
       }
 
       expect(integrity, 90.0);
+    });
+  });
+
+  group('7. WorkoutDetailPage Initial State & Reset Verification', () {
+    testWidgets(
+        'WorkoutDetailPage starts at Set 1, 0 reps, 0% cadence, and resets reps on next set',
+        (tester) async {
+      final user = UserModel(
+        username: 'workout_novice',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+      );
+      await tester.runAsync(() async {
+        await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      });
+      userController.loadUser('workout_novice');
+
+      // Novice Push Ups target is 2 sets x 8 reps
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: WorkoutDetailPage(),
+        ),
+      );
+      await tester.pump();
+
+      // 1. Verify starts at Set 1 (not Set 2)
+      expect(find.text('CURRENT: SET 01 OF 02'), findsOneWidget);
+      expect(find.text('COMPLETE SET 1'), findsOneWidget);
+
+      // 2. Verify starts at 0 reps (not 8 reps)
+      expect(find.text('0'), findsOneWidget);
+      expect(find.text(' / 8'), findsOneWidget);
+
+      // 3. Verify Cadence is 0%
+      expect(find.text('0% CADENCE'), findsOneWidget);
+
+      // 4. Verify Rest Timer is initially READY (not active)
+      expect(find.text('READY'), findsOneWidget);
+
+      // 5. Test incrementing reps
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pump();
+      expect(find.text('1'), findsOneWidget);
+
+      // 6. Test decrementing reps
+      await tester.tap(find.byIcon(Icons.remove));
+      await tester.pump();
+      expect(find.text('0'), findsOneWidget);
+
+      // 7. Complete Set 1 -> advances to Set 2 and resets reps to 0
+      await tester.tap(find.text('COMPLETE SET 1'));
+      await tester.pump();
+
+      // In test mode, rest timer finishes immediately
+      expect(find.text('CURRENT: SET 02 OF 02'), findsOneWidget);
+      expect(find.text('COMPLETE WORKOUT'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget); // Reps reset to 0!
+      expect(find.text('50% CADENCE'), findsOneWidget);
     });
   });
 }
