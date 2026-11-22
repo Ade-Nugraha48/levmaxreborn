@@ -4,6 +4,7 @@ import '../controller/auth_controller.dart';
 import '../controller/navigation_controller.dart';
 import '../controller/quote_controller.dart';
 import '../controller/quest_controller.dart';
+import '../controller/grooming_controller.dart';
 
 /// App Bindings for GetX Dependency Injection
 class InitialBinding extends Bindings {
@@ -40,6 +41,9 @@ class MainBinding extends Bindings {
     }
     if (!Get.isRegistered<QuestController>()) {
       Get.put<QuestController>(QuestController());
+    }
+    if (!Get.isRegistered<GroomingController>()) {
+      Get.lazyPut<GroomingController>(() => GroomingController());
     }
   }
 }
