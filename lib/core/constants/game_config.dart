@@ -207,7 +207,7 @@ class GameConfig {
       id: 'phantom_velocity',
       title: 'PHANTOM VELOCITY',
       description: 'Reached Pace 3:59 /km or faster in Cardio.',
-      targetValue: 3.99, // Pace in min/km <= 3:59 (3.9833)
+      targetValue: 1.0,
       isRare: true,
     ),
     AchievementDefinition(

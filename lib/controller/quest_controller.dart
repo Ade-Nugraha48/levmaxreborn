@@ -432,9 +432,11 @@ class QuestController extends GetxController {
 
       case QuestType.cardio:
         title = 'Cardio Run';
-        metricSummary = '${distanceKm.toStringAsFixed(1)} KM';
+        final int spdReward = StatCalculator.calculateCardioSpdReward(paceMinPerKm);
+        final String paceStr = StatCalculator.formatPace(paceMinPerKm);
+        metricSummary = '${distanceKm.toStringAsFixed(2)} KM · $paceStr';
         statRewards['END'] = 2;
-        statRewards['SPD'] = 1;
+        statRewards['SPD'] = spdReward;
         if (dailyQuest.value != null) {
           dailyQuest.value!.cardioCompleted = true;
         }

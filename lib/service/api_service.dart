@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../model/quote_model.dart';
+import '../model/weather_model.dart';
 
 /// API Service for REST Endpoints
 /// Conforms to `docs/api_spec.md` (Module 5).
 /// All public endpoints without API key, with 8-second timeout and offline fallback.
 class ApiService {
   static const String quoteApiUrl = 'https://dummyjson.com/quotes/random';
+  static const String weatherApiBaseUrl = 'https://api.open-meteo.com/v1/forecast';
   static const Duration timeoutDuration = Duration(seconds: 8);
 
   /// Offline fallback quotes with discipline and self-mastery themes
@@ -67,6 +69,36 @@ class ApiService {
       }
     } catch (_) {
       return getRandomFallbackQuote();
+    } finally {
+      if (client == null) {
+        httpClient.close();
+      }
+    }
+  }
+
+  /// Fetches real-time weather from Open-Meteo REST API with 8-second timeout
+  /// Falls back to offline default weather on failure or timeout
+  Future<WeatherModel> fetchCurrentWeather({
+    double latitude = -7.7828,
+    double longitude = 110.3670,
+    http.Client? client,
+  }) async {
+    final httpClient = client ?? http.Client();
+    try {
+      final uri = Uri.parse(
+        '$weatherApiBaseUrl?latitude=$latitude&longitude=$longitude&current_weather=true',
+      );
+      final response = await httpClient.get(uri).timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        return WeatherModel.fromJson(data);
+      } else {
+        return WeatherModel.fallback();
+      }
+    } catch (_) {
+      return WeatherModel.fallback();
     } finally {
       if (client == null) {
         httpClient.close();
