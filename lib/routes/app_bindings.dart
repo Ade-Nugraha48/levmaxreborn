@@ -6,6 +6,7 @@ import '../controller/quote_controller.dart';
 import '../controller/quest_controller.dart';
 import '../controller/grooming_controller.dart';
 import '../controller/cardio_controller.dart';
+import '../controller/stats_controller.dart';
 
 /// App Bindings for GetX Dependency Injection
 class InitialBinding extends Bindings {
@@ -48,6 +49,9 @@ class MainBinding extends Bindings {
     }
     if (!Get.isRegistered<CardioController>()) {
       Get.lazyPut<CardioController>(() => CardioController());
+    }
+    if (!Get.isRegistered<StatsController>()) {
+      Get.lazyPut<StatsController>(() => StatsController());
     }
   }
 }

@@ -8,6 +8,7 @@ import '../view/pages/main_shell_page.dart';
 import '../view/pages/workout_detail_page.dart';
 import '../view/pages/study_detail_page.dart';
 import '../view/pages/grooming_detail_page.dart';
+import '../view/pages/guide_page.dart';
 
 /// App Pages Configuration with Bindings
 class AppPages {
@@ -49,6 +50,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.groomingDetail,
       page: () => const GroomingDetailPage(),
+      binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.guide,
+      page: () => const GuidePage(),
       binding: MainBinding(),
     ),
   ];

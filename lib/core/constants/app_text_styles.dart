@@ -130,4 +130,45 @@ class AppTextStyles {
 
   static TextStyle labelMonoSmall({Color color = AppColors.textSecondary}) =>
       labelMonoSm(color: color);
+
+  // Generic Helpers
+  static TextStyle cinzel({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w600,
+    Color color = AppColors.textPrimary,
+    double letterSpacing = 1.5,
+  }) =>
+      GoogleFonts.cinzel(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+
+  static TextStyle dotGothic({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w400,
+    Color color = AppColors.textPrimary,
+  }) =>
+      GoogleFonts.dotGothic16(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  static TextStyle bodySmall({Color color = AppColors.textSecondary}) =>
+      GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
+
+  static TextStyle button({Color color = AppColors.textPrimary}) =>
+      GoogleFonts.cinzel(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.5,
+        color: color,
+      );
 }
