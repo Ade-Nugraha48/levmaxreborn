@@ -271,11 +271,11 @@ class CardioController extends GetxController {
     isPaused.value = !isPaused.value;
   }
 
-  /// Demo Mode Simulation: Adds simulated distance (+500m default)
+  /// Demo Mode Simulation: Adds simulated distance (+500m default) with realistic duration (+180s per +500m)
   void simulateAddDistance({double meters = 500.0}) {
     distanceMeters.value += meters;
-    // Scaled proportional duration: 500m per 150s (2.5 mins) simulates realistic pace of 5:00 /km
-    final addedSeconds = ((meters / 500.0) * 150).round();
+    // Scaled proportional duration: 500m per 180s (3.0 mins) simulates realistic pace of 6:00 /km
+    final addedSeconds = ((meters / 500.0) * 180).round();
     durationSeconds.value += addedSeconds;
 
     // Simulate route extension visually on map
@@ -299,8 +299,28 @@ class CardioController extends GetxController {
     );
   }
 
-  /// Terminates run, awards END and SPD stats, logs to Hive, checks achievements
+  /// Cancels active cardio tracking session without completing quest or awarding rewards
+  void cancelRun() {
+    _timer?.cancel();
+    _positionSubscription?.cancel();
+    isTracking.value = false;
+    isPaused.value = false;
+    distanceMeters.value = 0.0;
+    durationSeconds.value = 0;
+    avgPace.value = 0.0;
+    routePoints.clear();
+    antiCheatWarning.value = false;
+    locationStatusMessage.value = 'TRACKING CANCELLED';
+  }
+
+  /// Terminates run, awards END and SPD stats, logs to Hive, checks achievements.
+  /// Strictly requires distanceKm >= targetKm AND durationSeconds > 0.
   Future<QuestCompletionResult?> finishRun() async {
+    // Guard clause: strictly enforce target distance and duration before completing
+    if (!isTargetMet || durationSeconds.value <= 0) {
+      return null;
+    }
+
     _timer?.cancel();
     _positionSubscription?.cancel();
 

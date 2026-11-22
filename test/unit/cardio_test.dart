@@ -189,19 +189,19 @@ void main() {
       expect(cardioController.distanceKm, 0.0);
       expect(cardioController.durationSeconds.value, 0);
 
-      // Simulate +500m
+      // Simulate +500m (180s duration -> 6:00 min/km pace)
       cardioController.simulateAddDistance(meters: 500.0);
       expect(cardioController.distanceKm, 0.5);
-      expect(cardioController.durationSeconds.value, 150);
-      // Pace: (150s / 60s) / 0.5km = 2.5 / 0.5 = 5.0 min/km
-      expect(cardioController.avgPace.value, 5.0);
-      expect(cardioController.formattedPace, '5:00 /km');
+      expect(cardioController.durationSeconds.value, 180);
+      // Pace: (180s / 60s) / 0.5km = 3.0 / 0.5 = 6.0 min/km
+      expect(cardioController.avgPace.value, 6.0);
+      expect(cardioController.formattedPace, '6:00 /km');
 
-      // Simulate another +500m (total 1.0 km in 300s)
+      // Simulate another +500m (total 1.0 km in 360s)
       cardioController.simulateAddDistance(meters: 500.0);
       expect(cardioController.distanceKm, 1.0);
-      expect(cardioController.durationSeconds.value, 300);
-      expect(cardioController.avgPace.value, 5.0);
+      expect(cardioController.durationSeconds.value, 360);
+      expect(cardioController.avgPace.value, 6.0);
     });
   });
 
@@ -228,17 +228,17 @@ void main() {
           .put('strider_2026-11-22', state);
       questController.dailyQuest.value = state;
 
-      // Simulate 1.0 km at 5:00 min/km pace
+      // Simulate 1.0 km at 6:00 min/km pace
       cardioController.simulateAddDistance(meters: 1000.0);
       expect(cardioController.distanceKm, 1.0);
-      expect(cardioController.avgPace.value, 5.0);
+      expect(cardioController.avgPace.value, 6.0);
 
       final result = await cardioController.finishRun();
       expect(result, isNotNull);
 
-      // 5:00 min/km pace (< 5.5) yields +4 SPD and +2 END
+      // 6:00 min/km pace (5.5 - 6.99) yields +3 SPD and +2 END
       expect(user.endurance, 12); // 10 + 2 END
-      expect(user.speed, 14); // 10 + 4 SPD
+      expect(user.speed, 13); // 10 + 3 SPD
       expect(user.exp, 25); // +25 EXP
 
       // DailyQuestState updated
@@ -250,9 +250,61 @@ void main() {
       final cardioLog = logs.firstWhere((l) => l.questType == 'cardio');
       expect(cardioLog.username, 'strider');
       expect(cardioLog.distanceKm, 1.0);
-      expect(cardioLog.paceMinPerKm, 5.0);
+      expect(cardioLog.paceMinPerKm, 6.0);
       expect(cardioLog.statRewards['END'], 2);
-      expect(cardioLog.statRewards['SPD'], 4);
+      expect(cardioLog.statRewards['SPD'], 3);
+    });
+
+    test('finishRun strictly guards against distanceKm < targetKm or duration == 0', () async {
+      final user = UserModel(
+        username: 'runner_novice',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+        endurance: 10,
+        speed: 10,
+        exp: 0,
+      );
+      await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      userController.loadUser('runner_novice');
+
+      // Case 1: 0 km distance and 0s duration -> immediately finish
+      final zeroResult = await cardioController.finishRun();
+      expect(zeroResult, isNull);
+      expect(user.exp, 0);
+      expect(user.endurance, 10);
+      expect(user.speed, 10);
+
+      // Case 2: Incomplete distance (0.5 km < 1.0 km target)
+      cardioController.simulateAddDistance(meters: 500.0);
+      expect(cardioController.distanceKm, 0.5);
+      final partialResult = await cardioController.finishRun();
+      expect(partialResult, isNull);
+      expect(user.exp, 0);
+
+      // Case 3: completeQuest guard clause
+      final directResult = await questController.completeQuest(
+        type: QuestType.cardio,
+        distanceKm: 0.2,
+        durationMinutes: 1,
+        paceMinPerKm: 5.0,
+      );
+      expect(directResult.expGained, 0);
+      expect(user.exp, 0);
+    });
+
+    test('cancelRun cleanly aborts tracking without completing quest or awarding rewards', () {
+      cardioController.isTracking.value = true;
+      cardioController.simulateAddDistance(meters: 500.0);
+      expect(cardioController.distanceKm, 0.5);
+      expect(cardioController.durationSeconds.value, 180);
+
+      cardioController.cancelRun();
+
+      expect(cardioController.isTracking.value, isFalse);
+      expect(cardioController.distanceKm, 0.0);
+      expect(cardioController.durationSeconds.value, 0);
+      expect(cardioController.locationStatusMessage.value, 'TRACKING CANCELLED');
     });
 
     test('PHANTOM VELOCITY achievement unlocks when pace <= 3:59 min/km', () async {

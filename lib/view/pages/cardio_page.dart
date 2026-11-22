@@ -774,6 +774,12 @@ class CardioPage extends StatelessWidget {
     BuildContext context,
     CardioController controller,
   ) async {
+    // Check if target distance is met and duration > 0
+    if (controller.distanceKm < controller.targetKm || controller.durationSeconds.value <= 0) {
+      _showIncompleteRunDialog(context, controller);
+      return;
+    }
+
     final result = await controller.finishRun();
     if (result != null) {
       if (result.levelUpResult.didLevelUp) {
@@ -792,6 +798,122 @@ class CardioPage extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _showIncompleteRunDialog(
+    BuildContext context,
+    CardioController controller,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: AppColors.borderHairline, width: 1.0),
+        ),
+        title: Center(
+          child: Text(
+            'TARGET BELUM TERCAPAI',
+            style: GoogleFonts.cinzel(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.highlightYellow,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${controller.distanceKm.toStringAsFixed(2)} / ${controller.targetKm.toStringAsFixed(2)} KM',
+              style: GoogleFonts.dotGothic16(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Target jarak belum tercapai. Menghentikan sesi sekarang tidak akan memberikan EXP, Stats, atau catatan riwayat.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    controller.cancelRun();
+                    Get.snackbar(
+                      'SESI CARDIO DIBATALKAN',
+                      'Sesi cardio dibatalkan tanpa reward.',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: AppColors.surfaceElevated,
+                      colorText: AppColors.textSecondary,
+                      borderWidth: 1,
+                      borderColor: AppColors.borderHairline,
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: Color(0xFF33343A)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  child: Text(
+                    'BATALKAN SESI\n(TANPA REWARD)',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.cinzel(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.errorRed,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: Text(
+                    'LANJUTKAN\nLARI',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.cinzel(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF05060A),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLevelUpDialog(BuildContext context, LevelUpResult levelUp) {

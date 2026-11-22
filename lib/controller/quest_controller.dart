@@ -451,6 +451,25 @@ class QuestController extends GetxController {
         break;
 
       case QuestType.cardio:
+        // Guard clause: strictly require full target distance and duration before awarding quest
+        final rank = user.rank;
+        final rankTarget =
+            GameConfig.rankTargets[rank] ?? GameConfig.rankTargets['Novice']!;
+        final minTargetKm = rankTarget.cardioDistanceKm;
+        if (distanceKm < minTargetKm || (durationMinutes <= 0 && paceMinPerKm <= 0)) {
+          return const QuestCompletionResult(
+            levelUpResult: LevelUpResult(
+              newLevel: 1,
+              remainingExp: 0,
+              levelsGained: 0,
+              updatedStats: {},
+            ),
+            fullClearAchieved: false,
+            expGained: 0,
+            statRewards: {},
+          );
+        }
+
         title = 'Cardio Run';
         final int spdReward = StatCalculator.calculateCardioSpdReward(paceMinPerKm);
         final String paceStr = StatCalculator.formatPace(paceMinPerKm);
