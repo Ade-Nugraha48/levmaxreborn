@@ -9,6 +9,7 @@ import '../model/daily_quest_state_model.dart';
 import '../model/quest_log_model.dart';
 import '../routes/app_routes.dart';
 import '../service/hive_service.dart';
+import '../service/notification_service.dart';
 import 'navigation_controller.dart';
 import 'user_controller.dart';
 
@@ -500,6 +501,12 @@ class QuestController extends GetxController {
         .toList();
     final newAchievements =
         await UserController.to.checkAchievements(userLogs);
+
+    // Trigger Immediate Quest Completed Notification
+    await NotificationService.showQuestCompleted(
+      questTitle: title,
+      expGained: expGained,
+    );
 
     // Refresh UI
     dailyQuest.refresh();

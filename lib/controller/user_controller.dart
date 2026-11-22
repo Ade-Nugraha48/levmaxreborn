@@ -3,6 +3,8 @@ import '../model/user_model.dart';
 import '../model/quest_log_model.dart';
 import '../model/achievement_model.dart';
 import '../service/hive_service.dart';
+import '../service/session_service.dart';
+import '../service/notification_service.dart';
 import '../core/utils/stat_calculator.dart';
 import '../core/utils/date_helper.dart';
 
@@ -113,6 +115,8 @@ class UserController extends GetxController {
       u.intelligence = levelUpResult.updatedStats['INT'] ?? u.intelligence;
       u.willpower = levelUpResult.updatedStats['WIL'] ?? u.willpower;
       u.appearance = levelUpResult.updatedStats['APP'] ?? u.appearance;
+
+      await NotificationService.showLevelUp(newLevel: levelUpResult.newLevel);
     } else {
       u.exp = totalExp;
     }
@@ -121,6 +125,7 @@ class UserController extends GetxController {
     final newRank = u.rank;
     if (newRank != oldRank && !u.rankHistory.containsKey(newRank)) {
       u.rankHistory[newRank] = DateHelper.todayString();
+      await NotificationService.showRankUp(newRank: newRank);
     }
 
     // 5. Update Growth Snapshot for today
@@ -158,6 +163,9 @@ class UserController extends GetxController {
         final success = await unlockAchievement(ach.id);
         if (success) {
           newlyUnlocked.add(ach.title);
+          await NotificationService.showAchievementUnlocked(
+            achievementTitle: ach.title,
+          );
         }
       }
     }
@@ -187,6 +195,37 @@ class UserController extends GetxController {
     await saveUser();
   }
 
+  /// Adds EXP directly (e.g. for Developer Demo Mode)
+  Future<LevelUpResult> addExp(int expToAdd) async {
+    return applyQuestReward(expGained: expToAdd);
+  }
+
+  /// Adds bonus points to all 6 core attributes (Developer Demo Mode)
+  Future<void> addStatsToAll(int amount) async {
+    final u = user.value;
+    if (u == null) return;
+
+    final oldRank = u.rank;
+    u.strength += amount;
+    u.endurance += amount;
+    u.speed += amount;
+    u.intelligence += amount;
+    u.willpower += amount;
+    u.appearance += amount;
+
+    final newRank = u.rank;
+    if (newRank != oldRank && !u.rankHistory.containsKey(newRank)) {
+      u.rankHistory[newRank] = DateHelper.todayString();
+      await NotificationService.showRankUp(newRank: newRank);
+    }
+
+    final today = DateHelper.todayString();
+    u.growthSnapshots[today] = u.totalStats;
+
+    await saveUser();
+    user.refresh();
+  }
+
   /// Updates user profile details (photo, username, password)
   Future<void> updateProfile({
     String? photoPath,
@@ -207,6 +246,7 @@ class UserController extends GetxController {
       await HiveService.usersBox.delete(u.username);
       u.username = newUsername;
       await HiveService.usersBox.put(newUsername, u);
+      await SessionService.setActiveUsername(newUsername);
     } else {
       await saveUser();
     }

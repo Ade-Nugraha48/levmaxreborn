@@ -5,6 +5,7 @@ import 'routes/app_pages.dart';
 import 'routes/app_bindings.dart';
 import 'service/hive_service.dart';
 import 'service/session_service.dart';
+import 'service/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,9 @@ void main() async {
   // Initialize Local Storage Layers (Modul 6)
   await HiveService.init();
   await SessionService.init();
+
+  // Initialize Notification Service (Modul 7)
+  await NotificationService.init();
 
   runApp(const LevMaxApp());
 }

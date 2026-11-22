@@ -9,6 +9,8 @@ import '../view/pages/workout_detail_page.dart';
 import '../view/pages/study_detail_page.dart';
 import '../view/pages/grooming_detail_page.dart';
 import '../view/pages/guide_page.dart';
+import '../view/pages/achievements_page.dart';
+import '../view/pages/edit_profile_page.dart';
 
 /// App Pages Configuration with Bindings
 class AppPages {
@@ -55,6 +57,16 @@ class AppPages {
     GetPage(
       name: AppRoutes.guide,
       page: () => const GuidePage(),
+      binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.achievements,
+      page: () => const AchievementsPage(),
+      binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.editProfile,
+      page: () => const EditProfilePage(),
       binding: MainBinding(),
     ),
   ];
