@@ -51,7 +51,7 @@ class MainBinding extends Bindings {
       Get.lazyPut<CardioController>(() => CardioController());
     }
     if (!Get.isRegistered<StatsController>()) {
-      Get.lazyPut<StatsController>(() => StatsController());
+      Get.put<StatsController>(StatsController());
     }
   }
 }

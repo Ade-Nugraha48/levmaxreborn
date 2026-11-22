@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:levmaxreborn/controller/quest_controller.dart';
 import 'package:levmaxreborn/controller/stats_controller.dart';
 import 'package:levmaxreborn/controller/user_controller.dart';
 import 'package:levmaxreborn/core/constants/hive_boxes.dart';
@@ -229,10 +230,10 @@ void main() {
       statsController.loadQuestLogs();
 
       // Check lifetime records
-      expect(statsController.longestStreak, equals(21));
-      expect(statsController.totalCardioKm, equals(5.5));
-      expect(statsController.totalStudyHours, equals(1.5)); // 90 mins / 60
-      expect(statsController.totalQuestsCleared, equals(6));
+      expect(statsController.longestStreak.value, equals(21));
+      expect(statsController.totalCardioKm.value, equals(5.5));
+      expect(statsController.totalStudyHours.value, equals(1.5)); // 90 mins / 60
+      expect(statsController.totalQuestsCleared.value, equals(6));
 
       // Check cumulative workout breakdown
       final reps = statsController.cumulativeWorkoutReps;
@@ -240,7 +241,7 @@ void main() {
       expect(reps['Squats'], equals(60));
       expect(reps['Sit Ups'], equals(30));
       expect(reps['Pull Ups'], equals(15));
-      expect(statsController.maxWorkoutReps, equals(60));
+      expect(statsController.maxWorkoutReps.value, equals(60));
 
       // Check Rank Chronicle
       final chronicle = statsController.rankChronicle;
@@ -254,6 +255,51 @@ void main() {
       expect(chronicle[1].isCurrent, isFalse);
       expect(chronicle[2].rank, equals('Rookie'));
       expect(chronicle[3].rank, equals('Novice'));
+    });
+
+    test('StatsController updates in real-time when new quest is logged or reward is applied', () async {
+      final user = UserModel(
+        username: 'live_user',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+      );
+      await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      userController.loadUser('live_user');
+
+      statsController = Get.put(StatsController());
+      final questController = Get.put(QuestController());
+
+      // Initial state: 0 quests cleared, 0 reps, 0 cardio km
+      expect(statsController.totalQuestsCleared.value, equals(0));
+      expect(statsController.cumulativeWorkoutReps['Push Ups'], equals(0));
+      expect(statsController.totalCardioKm.value, equals(0.0));
+
+      // Complete a workout quest
+      await questController.completeQuest(
+        type: QuestType.workout,
+        exerciseName: 'Push Ups',
+        workoutIndex: 0,
+        repsCount: 16,
+      );
+
+      // Verify real-time reactive update immediately WITHOUT app restart
+      expect(statsController.totalQuestsCleared.value, equals(1));
+      expect(statsController.cumulativeWorkoutReps['Push Ups'], equals(16));
+      expect(statsController.maxWorkoutReps.value, equals(16));
+      expect(statsController.sortedGrowthSnapshots.isNotEmpty, isTrue);
+
+      // Complete a cardio quest (1.5 km, 9 mins, pace 6.0 min/km)
+      await questController.completeQuest(
+        type: QuestType.cardio,
+        distanceKm: 1.5,
+        durationMinutes: 9,
+        paceMinPerKm: 6.0,
+      );
+
+      // Verify cardio real-time reactive update
+      expect(statsController.totalQuestsCleared.value, equals(2));
+      expect(statsController.totalCardioKm.value, equals(1.5));
     });
   });
 

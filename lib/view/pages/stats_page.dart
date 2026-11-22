@@ -657,39 +657,41 @@ class StatsPage extends StatelessWidget {
   // --- SUB-TAB 1: SEJARAH ---
 
   Widget _buildSejarahTab(UserModel user, StatsController controller) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Growth Trajectory Section
-          _buildGrowthTrajectorySection(user, controller),
+    return Obx(() {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Growth Trajectory Section
+            _buildGrowthTrajectorySection(user, controller),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // 2. 2x2 Lifetime Records Grid
-          _buildLifetimeRecordsGrid(controller),
+            // 2. 2x2 Lifetime Records Grid
+            _buildLifetimeRecordsGrid(controller),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // 3. Gothic Divider with centered diamond
-          _buildGothicDiamondDivider(),
+            // 3. Gothic Divider with centered diamond
+            _buildGothicDiamondDivider(),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // 4. Workout Cumulative Reps Section
-          _buildWorkoutCumulativeSection(controller),
+            // 4. Workout Cumulative Reps Section
+            _buildWorkoutCumulativeSection(controller),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // 5. Rank Chronicle Timeline Section
-          _buildRankChronicleSection(controller),
+            // 5. Rank Chronicle Timeline Section
+            _buildRankChronicleSection(controller),
 
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildGrowthTrajectorySection(
@@ -780,7 +782,7 @@ class StatsPage extends StatelessWidget {
 
               // Minimalist Line Chart
               GrowthLineChart(
-                snapshots: controller.sortedGrowthSnapshots,
+                snapshots: controller.sortedGrowthSnapshots.toList(),
               ),
             ],
           ),
@@ -801,28 +803,28 @@ class StatsPage extends StatelessWidget {
         // Cell 1: Longest Streak
         _buildRecordCard(
           title: 'LONGEST STREAK',
-          value: '${controller.longestStreak} DAYS',
+          value: '${controller.longestStreak.value} DAYS',
           valueColor: AppColors.secondary,
           badge: 'RECORD',
         ),
         // Cell 2: Total Cardio
         _buildRecordCard(
           title: 'TOTAL CARDIO',
-          value: '${controller.totalCardioKm.toStringAsFixed(1)} KM',
+          value: '${controller.totalCardioKm.value.toStringAsFixed(1)} KM',
           valueColor: AppColors.textPrimary,
           badge: 'DIST',
         ),
         // Cell 3: Total Study
         _buildRecordCard(
           title: 'TOTAL STUDY',
-          value: '${controller.totalStudyHours.toStringAsFixed(1)} HRS',
+          value: '${controller.totalStudyHours.value.toStringAsFixed(1)} HRS',
           valueColor: AppColors.textPrimary,
           badge: 'INTEL',
         ),
         // Cell 4: Quests Cleared
         _buildRecordCard(
           title: 'QUESTS CLEARED',
-          value: '${controller.totalQuestsCleared}',
+          value: '${controller.totalQuestsCleared.value}',
           valueColor: AppColors.primary,
           badge: 'TOTAL',
         ),
@@ -913,7 +915,7 @@ class StatsPage extends StatelessWidget {
 
   Widget _buildWorkoutCumulativeSection(StatsController controller) {
     final reps = controller.cumulativeWorkoutReps;
-    final maxReps = controller.maxWorkoutReps;
+    final maxReps = controller.maxWorkoutReps.value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

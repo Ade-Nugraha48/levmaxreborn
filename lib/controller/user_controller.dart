@@ -7,6 +7,7 @@ import '../service/session_service.dart';
 import '../service/notification_service.dart';
 import '../core/utils/stat_calculator.dart';
 import '../core/utils/date_helper.dart';
+import 'stats_controller.dart';
 
 /// User Controller - Core Reactive Game State & Progression Engine
 /// Manages User Profile, 6 Stats (STR, END, SPD, INT, WIL, APP), EXP Curve,
@@ -123,9 +124,11 @@ class UserController extends GetxController {
 
     // 4. Check Rank Progression
     final newRank = u.rank;
-    if (newRank != oldRank && !u.rankHistory.containsKey(newRank)) {
+    if (!u.rankHistory.containsKey(newRank)) {
       u.rankHistory[newRank] = DateHelper.todayString();
-      await NotificationService.showRankUp(newRank: newRank);
+      if (newRank != oldRank) {
+        await NotificationService.showRankUp(newRank: newRank);
+      }
     }
 
     // 5. Update Growth Snapshot for today
@@ -133,6 +136,11 @@ class UserController extends GetxController {
     u.growthSnapshots[today] = u.totalStats;
 
     await saveUser();
+    user.refresh();
+
+    if (Get.isRegistered<StatsController>()) {
+      StatsController.to.refreshStats();
+    }
     return levelUpResult;
   }
 
@@ -193,6 +201,11 @@ class UserController extends GetxController {
     u.growthSnapshots[today] = u.totalStats;
 
     await saveUser();
+    user.refresh();
+
+    if (Get.isRegistered<StatsController>()) {
+      StatsController.to.refreshStats();
+    }
   }
 
   /// Adds EXP directly (e.g. for Developer Demo Mode)
@@ -214,9 +227,11 @@ class UserController extends GetxController {
     u.appearance += amount;
 
     final newRank = u.rank;
-    if (newRank != oldRank && !u.rankHistory.containsKey(newRank)) {
+    if (!u.rankHistory.containsKey(newRank)) {
       u.rankHistory[newRank] = DateHelper.todayString();
-      await NotificationService.showRankUp(newRank: newRank);
+      if (newRank != oldRank) {
+        await NotificationService.showRankUp(newRank: newRank);
+      }
     }
 
     final today = DateHelper.todayString();
@@ -224,6 +239,10 @@ class UserController extends GetxController {
 
     await saveUser();
     user.refresh();
+
+    if (Get.isRegistered<StatsController>()) {
+      StatsController.to.refreshStats();
+    }
   }
 
   /// Updates user profile details (photo, username, password)

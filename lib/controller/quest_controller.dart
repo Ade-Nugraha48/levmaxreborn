@@ -12,6 +12,7 @@ import '../service/hive_service.dart';
 import '../service/notification_service.dart';
 import 'navigation_controller.dart';
 import 'user_controller.dart';
+import 'stats_controller.dart';
 
 /// Quest Completion Result Container
 class QuestCompletionResult {
@@ -532,6 +533,11 @@ class QuestController extends GetxController {
       paceMinPerKm: paceMinPerKm,
     );
     await HiveService.questLogsBox.put(log.id, log);
+
+    // Refresh StatsController real-time aggregations
+    if (Get.isRegistered<StatsController>()) {
+      StatsController.to.refreshStats();
+    }
 
     // Evaluate Achievements
     final userLogs = HiveService.questLogsBox.values
