@@ -4,11 +4,30 @@ import 'package:get/get.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/game_config.dart';
 import '../core/utils/date_helper.dart';
+import '../core/utils/stat_calculator.dart';
 import '../model/daily_quest_state_model.dart';
+import '../model/quest_log_model.dart';
 import '../routes/app_routes.dart';
 import '../service/hive_service.dart';
 import 'navigation_controller.dart';
 import 'user_controller.dart';
+
+/// Quest Completion Result Container
+class QuestCompletionResult {
+  final LevelUpResult levelUpResult;
+  final bool fullClearAchieved;
+  final int expGained;
+  final Map<String, int> statRewards;
+  final List<String> newAchievements;
+
+  const QuestCompletionResult({
+    required this.levelUpResult,
+    required this.fullClearAchieved,
+    required this.expGained,
+    required this.statRewards,
+    this.newAchievements = const [],
+  });
+}
 
 /// Quest Type Enumeration
 enum QuestType { workout, study, cardio, grooming }
@@ -350,5 +369,145 @@ class QuestController extends GetxController {
     } else {
       Get.toNamed(quest.route, arguments: quest.routeArguments);
     }
+  }
+
+  /// Completes a quest according to `docs/user_flow.md` Section 4
+  /// 1. Adds stat rewards and EXP
+  /// 2. Saves QuestLogModel to Hive
+  /// 3. Marks quest complete in DailyQuestStateModel and checks Full Clear
+  /// 4. Executes Level Up (+2 all stats) and Rank Up progression
+  /// 5. Evaluates Achievements
+  /// 6. Returns QuestCompletionResult
+  Future<QuestCompletionResult> completeQuest({
+    required QuestType type,
+    String? exerciseName,
+    int? workoutIndex,
+    int repsCount = 0,
+    int durationMinutes = 0,
+    double distanceKm = 0.0,
+    double paceMinPerKm = 0.0,
+  }) async {
+    final user = UserController.to.currentUser;
+    if (user == null) {
+      return const QuestCompletionResult(
+        levelUpResult: LevelUpResult(
+          newLevel: 1,
+          remainingExp: 0,
+          levelsGained: 0,
+          updatedStats: {},
+        ),
+        fullClearAchieved: false,
+        expGained: 0,
+        statRewards: {},
+      );
+    }
+
+    String title = '';
+    String metricSummary = '';
+    final Map<String, int> statRewards = {};
+    int expGained = GameConfig.expPerQuest; // 25
+
+    switch (type) {
+      case QuestType.workout:
+        title = exerciseName ?? 'Push Ups';
+        metricSummary = '$repsCount REPS · BODYWEIGHT';
+        statRewards['STR'] = 2;
+        statRewards['END'] = 1;
+        if (workoutIndex != null &&
+            dailyQuest.value != null &&
+            workoutIndex < dailyQuest.value!.workoutCompleted.length) {
+          dailyQuest.value!.workoutCompleted[workoutIndex] = true;
+        }
+        break;
+
+      case QuestType.study:
+        title = 'Lock-In Study';
+        metricSummary = '$durationMinutes MINS FOCUS';
+        final int intReward = (user.rank == 'Apostle') ? 4 : 3;
+        statRewards['INT'] = intReward;
+        if (dailyQuest.value != null) {
+          dailyQuest.value!.studyCompleted = true;
+        }
+        break;
+
+      case QuestType.cardio:
+        title = 'Cardio Run';
+        metricSummary = '${distanceKm.toStringAsFixed(1)} KM';
+        statRewards['END'] = 2;
+        statRewards['SPD'] = 1;
+        if (dailyQuest.value != null) {
+          dailyQuest.value!.cardioCompleted = true;
+        }
+        break;
+
+      case QuestType.grooming:
+        title = 'Daily Grooming';
+        metricSummary = '$repsCount ITEMS PROTOCOL';
+        statRewards['APP'] = 3;
+        if (dailyQuest.value != null) {
+          dailyQuest.value!.groomingCompleted = true;
+        }
+        break;
+    }
+
+    // Check Full Clear (5/5 completed)
+    bool fullClearAchieved = false;
+    if (dailyQuest.value != null) {
+      if (dailyQuest.value!.completedCount == 5 &&
+          !dailyQuest.value!.fullClearClaimed) {
+        dailyQuest.value!.fullClearClaimed = true;
+        fullClearAchieved = true;
+        expGained += GameConfig.fullClearBonusExp; // +50 EXP
+        statRewards['WIL'] = (statRewards['WIL'] ?? 0) + 2; // +2 WIL
+      }
+      if (dailyQuest.value!.isInBox) {
+        await dailyQuest.value!.save();
+      } else {
+        final boxKey = '${dailyQuest.value!.username}_${dailyQuest.value!.date}';
+        await HiveService.dailyQuestStatesBox.put(boxKey, dailyQuest.value!);
+      }
+    }
+
+    // Process Level Up & Progression
+    final levelUpResult = await UserController.to.applyQuestReward(
+      expGained: expGained,
+      statRewards: statRewards,
+    );
+
+    // Save QuestLogModel to Hive
+    final log = QuestLogModel(
+      id: '${user.username}_${DateTime.now().millisecondsSinceEpoch}',
+      username: user.username,
+      questType: type.name,
+      title: title.toUpperCase(),
+      completedAt: DateTime.now(),
+      expGained: expGained,
+      statRewards: statRewards,
+      metricSummary: metricSummary,
+      exerciseName: exerciseName,
+      repsCount: repsCount,
+      durationMinutes: durationMinutes,
+      distanceKm: distanceKm,
+      paceMinPerKm: paceMinPerKm,
+    );
+    await HiveService.questLogsBox.put(log.id, log);
+
+    // Evaluate Achievements
+    final userLogs = HiveService.questLogsBox.values
+        .where((l) => l.username == user.username)
+        .toList();
+    final newAchievements =
+        await UserController.to.checkAchievements(userLogs);
+
+    // Refresh UI
+    dailyQuest.refresh();
+
+    return QuestCompletionResult(
+      levelUpResult: levelUpResult,
+      fullClearAchieved: fullClearAchieved,
+      expGained: expGained,
+      statRewards: statRewards,
+      newAchievements: newAchievements,
+    );
   }
 }

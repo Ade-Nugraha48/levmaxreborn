@@ -5,6 +5,8 @@ import '../view/pages/splash_page.dart';
 import '../view/pages/login_page.dart';
 import '../view/pages/register_page.dart';
 import '../view/pages/main_shell_page.dart';
+import '../view/pages/workout_detail_page.dart';
+import '../view/pages/study_detail_page.dart';
 
 /// App Pages Configuration with Bindings
 class AppPages {
@@ -31,6 +33,16 @@ class AppPages {
     GetPage(
       name: AppRoutes.main,
       page: () => const MainShellPage(),
+      binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.workoutDetail,
+      page: () => const WorkoutDetailPage(),
+      binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.studyDetail,
+      page: () => const StudyDetailPage(),
       binding: MainBinding(),
     ),
   ];
