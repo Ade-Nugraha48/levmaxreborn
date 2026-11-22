@@ -348,7 +348,12 @@ void main() {
       ElevatedButton btn = tester.widget(find.byType(ElevatedButton));
       expect(btn.onPressed, isNull);
 
-      // 6. Test incrementing & decrementing reps
+      // 6. Test incrementing & decrementing reps and boundary clamping
+      // At 0 reps, tapping decrement must stay 0 and icon should be muted
+      await tester.tap(find.byIcon(Icons.remove));
+      await tester.pump();
+      expect(find.text('0'), findsOneWidget);
+
       await tester.tap(find.byIcon(Icons.add));
       await tester.pump();
       expect(find.text('1'), findsOneWidget);
@@ -359,6 +364,13 @@ void main() {
 
       // 7. Increment reps up to targetReps (8)
       for (int i = 0; i < 8; i++) {
+        await tester.tap(find.byIcon(Icons.add));
+      }
+      await tester.pump();
+      expect(find.text('8'), findsOneWidget);
+
+      // Clamping test: attempting to increment past targetReps (8) must keep reps at 8
+      for (int i = 0; i < 5; i++) {
         await tester.tap(find.byIcon(Icons.add));
       }
       await tester.pump();

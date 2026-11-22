@@ -103,6 +103,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     });
   }
 
+  void _incrementReps() {
+    if (currentReps < targetReps) {
+      setState(() => currentReps++);
+    }
+  }
+
+  void _decrementReps() {
+    if (currentReps > 0) {
+      setState(() => currentReps--);
+    }
+  }
+
   Future<void> _handleCompleteSet() async {
     // Guard clause: strictly require targetReps reached and not resting or submitting
     if (isSubmitting || isResting || currentReps < targetReps) {
@@ -191,6 +203,10 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         ((currentSet - 1) / totalSets * 100).toInt().clamp(0, 100);
     final bool canComplete =
         !isSubmitting && !isResting && currentReps >= targetReps;
+    final bool canDecrement =
+        currentReps > 0 && !isResting && !isSubmitting;
+    final bool canIncrement =
+        currentReps < targetReps && !isResting && !isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -349,11 +365,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                               children: [
                                 // Decrement Button
                                 InkWell(
-                                  onTap: () {
-                                    if (currentReps > 0) {
-                                      setState(() => currentReps--);
-                                    }
-                                  },
+                                  onTap: canDecrement ? _decrementReps : null,
                                   borderRadius: BorderRadius.circular(4),
                                   child: Container(
                                     width: 44,
@@ -361,14 +373,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF0D1018),
                                       border: Border.all(
-                                        color: const Color(0xFF33343A),
+                                        color: canDecrement
+                                            ? const Color(0xFF33343A)
+                                            : const Color(0xFF1E2538),
                                         width: 1,
                                       ),
                                     ),
-                                    child: const Center(
+                                    child: Center(
                                       child: Icon(
                                         Icons.remove,
-                                        color: AppColors.textPrimary,
+                                        color: canDecrement
+                                            ? AppColors.textPrimary
+                                            : AppColors.textMuted,
                                         size: 20,
                                       ),
                                     ),
@@ -404,11 +420,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
 
                                 // Increment Button
                                 InkWell(
-                                  onTap: () {
-                                    if (currentReps < 99) {
-                                      setState(() => currentReps++);
-                                    }
-                                  },
+                                  onTap: canIncrement ? _incrementReps : null,
                                   borderRadius: BorderRadius.circular(4),
                                   child: Container(
                                     width: 44,
@@ -416,14 +428,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF0D1018),
                                       border: Border.all(
-                                        color: const Color(0xFF33343A),
+                                        color: canIncrement
+                                            ? const Color(0xFF33343A)
+                                            : const Color(0xFF1E2538),
                                         width: 1,
                                       ),
                                     ),
-                                    child: const Center(
+                                    child: Center(
                                       child: Icon(
                                         Icons.add,
-                                        color: AppColors.secondary,
+                                        color: canIncrement
+                                            ? AppColors.secondary
+                                            : AppColors.textMuted,
                                         size: 20,
                                       ),
                                     ),
