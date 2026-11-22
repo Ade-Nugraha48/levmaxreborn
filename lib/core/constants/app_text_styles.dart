@@ -127,4 +127,7 @@ class AppTextStyles {
         letterSpacing: 1.2,
         color: color,
       );
+
+  static TextStyle labelMonoSmall({Color color = AppColors.textSecondary}) =>
+      labelMonoSm(color: color);
 }

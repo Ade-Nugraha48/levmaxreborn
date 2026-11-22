@@ -1,0 +1,354 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../core/constants/app_colors.dart';
+import '../core/constants/game_config.dart';
+import '../core/utils/date_helper.dart';
+import '../model/daily_quest_state_model.dart';
+import '../routes/app_routes.dart';
+import '../service/hive_service.dart';
+import 'navigation_controller.dart';
+import 'user_controller.dart';
+
+/// Quest Type Enumeration
+enum QuestType { workout, study, cardio, grooming }
+
+/// Separated Reward Badge Data Object
+class QuestRewardBadge {
+  final String label;
+  final Color color;
+
+  const QuestRewardBadge({
+    required this.label,
+    required this.color,
+  });
+}
+
+/// Unified Quest Display Data for Home HUD & Quest Cards
+class QuestItemData {
+  final String id;
+  final String title;
+  final String subtitle;
+  final bool isDone;
+  final List<QuestRewardBadge> rewardBadges;
+  final QuestType type;
+  final int workoutIndex;
+  final String route;
+  final dynamic routeArguments;
+
+  const QuestItemData({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.isDone,
+    required this.rewardBadges,
+    required this.type,
+    this.workoutIndex = 0,
+    required this.route,
+    this.routeArguments,
+  });
+}
+
+/// Quest Controller - Manages Daily Reset, Workout Rotation,
+/// Active-First Quest Sorting, HP & Inactivity Penalty Checks, and Countdown Timer.
+/// Conforms to `docs/user_flow.md` and `docs/design_blueprint.md`.
+class QuestController extends GetxController {
+  static QuestController get to => Get.find<QuestController>();
+
+  final Rxn<DailyQuestStateModel> dailyQuest = Rxn<DailyQuestStateModel>();
+  final RxString resetCountdown = 'RESET 00:00:00'.obs;
+  final RxBool hasHpWarning = false.obs;
+  final RxBool hasPenaltyNotice = false.obs;
+  int hpDeductionAmount = 0;
+
+  Timer? _countdownTimer;
+
+  @override
+  void onInit() {
+    super.onInit();
+    runDailyResetCheck();
+    _startCountdownTimer();
+  }
+
+  @override
+  void onClose() {
+    _countdownTimer?.cancel();
+    super.onClose();
+  }
+
+  /// Calculates dynamic countdown until midnight (00:00:00)
+  void _startCountdownTimer() {
+    _updateCountdownString();
+    if (Get.testMode) return;
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateCountdownString();
+    });
+  }
+
+  void _updateCountdownString() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final remaining = tomorrow.difference(now);
+    final h = remaining.inHours.toString().padLeft(2, '0');
+    final m = (remaining.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (remaining.inSeconds % 60).toString().padLeft(2, '0');
+    resetCountdown.value = 'RESET $h:$m:$s';
+  }
+
+  /// Executes daily reset check comparing current date with user's lastActiveDate
+  /// Follows specification in `docs/user_flow.md` Section 2.
+  Future<void> runDailyResetCheck() async {
+    final user = UserController.to.currentUser;
+    if (user == null) return;
+
+    final today = DateHelper.todayString();
+
+    if (user.lastActiveDate.isEmpty) {
+      // First launch or fresh registration
+      user.lastActiveDate = today;
+      final initialExercises = [
+        GameConfig.workoutExercises[0],
+        GameConfig.workoutExercises[2],
+      ];
+      final state = DailyQuestStateModel(
+        username: user.username,
+        date: today,
+        workoutExercises: initialExercises,
+      );
+      await HiveService.dailyQuestStatesBox.put('${user.username}_$today', state);
+      dailyQuest.value = state;
+      await UserController.to.saveUser();
+      return;
+    }
+
+    final deltaDays = DateHelper.daysBetween(user.lastActiveDate, today);
+
+    if (deltaDays == 0) {
+      // Same day login: load today's state
+      var state =
+          HiveService.dailyQuestStatesBox.get('${user.username}_$today');
+      if (state == null) {
+        state = DailyQuestStateModel(
+          username: user.username,
+          date: today,
+          workoutExercises: [
+            GameConfig.workoutExercises[0],
+            GameConfig.workoutExercises[2],
+          ],
+        );
+        await HiveService.dailyQuestStatesBox.put('${user.username}_$today', state);
+      }
+      dailyQuest.value = state;
+    } else {
+      // deltaDays >= 1: evaluate streak, HP deductions, and inactivity penalty
+      if (deltaDays == 1) {
+        final yesterday = DateHelper.formatDate(
+            DateHelper.parseDate(today).subtract(const Duration(days: 1)));
+        final yesterdayState =
+            HiveService.dailyQuestStatesBox.get('${user.username}_$yesterday');
+        final bool hadCompletedQuest =
+            yesterdayState != null && yesterdayState.completedCount >= 1;
+
+        if (hadCompletedQuest) {
+          user.streakDays += 1;
+          if (user.streakDays > user.longestStreak) {
+            user.longestStreak = user.streakDays;
+          }
+          // Daily Login reward: +1 WIL
+          user.willpower += 1;
+          // Milestone reward: every 7 days streak gives bonus +1 WIL
+          if (user.streakDays > 0 && user.streakDays % 7 == 0) {
+            user.willpower += 1;
+          }
+        } else {
+          user.streakDays = 0;
+        }
+      } else if (deltaDays == 2) {
+        // Missed 1 full day: -34 HP, streak broken
+        user.hp = (user.hp - GameConfig.dailyHpDeduction).clamp(0, 100);
+        user.streakDays = 0;
+        hasHpWarning.value = true;
+        hpDeductionAmount = GameConfig.dailyHpDeduction;
+      } else {
+        // deltaDays >= 3: 3 consecutive days missed -> Trigger 3-Day Inactivity Penalty
+        user.hp = 0;
+        await UserController.to.applyThreeDayPenalty();
+        hasPenaltyNotice.value = true;
+      }
+
+      // Rotate 2 workout exercises distinct from yesterday's workout
+      final List<String> previousExercises = dailyQuest.value?.workoutExercises ??
+          [GameConfig.workoutExercises[0], GameConfig.workoutExercises[2]];
+
+      final rotatedExercises = GameConfig.workoutExercises
+          .where((ex) => !previousExercises.contains(ex))
+          .take(2)
+          .toList();
+
+      if (rotatedExercises.length < 2) {
+        rotatedExercises.clear();
+        rotatedExercises.addAll([
+          GameConfig.workoutExercises[1],
+          GameConfig.workoutExercises[3],
+        ]);
+      }
+
+      // Create new DailyQuestStateModel for today
+      final newState = DailyQuestStateModel(
+        username: user.username,
+        date: today,
+        workoutExercises: rotatedExercises,
+        workoutCompleted: [false, false],
+        studyCompleted: false,
+        cardioCompleted: false,
+        groomingCompleted: false,
+        fullClearClaimed: false,
+      );
+      await HiveService.dailyQuestStatesBox.put('${user.username}_$today', newState);
+      dailyQuest.value = newState;
+
+      // Reset isChecked for all grooming items belonging to this user
+      for (final item in HiveService.groomingItemsBox.values) {
+        if (item.username == user.username && item.isChecked) {
+          item.isChecked = false;
+          await item.save();
+        }
+      }
+
+      // Record growth trajectory snapshot and update lastActiveDate
+      user.growthSnapshots[today] = user.totalStats;
+      user.lastActiveDate = today;
+      await UserController.to.saveUser();
+    }
+
+    UserController.to.user.refresh();
+    dailyQuest.refresh();
+  }
+
+  /// Total count of completed quests today (0 to 5)
+  int get completedCount => dailyQuest.value?.completedCount ?? 0;
+
+  /// Whether all 5 quests are completed today
+  bool get isAllCompleted => dailyQuest.value?.isAllCompleted ?? false;
+
+  /// Active-first sorted quests getter:
+  /// Active quests (!isDone) are sorted to the top with broken-white stick bar,
+  /// completed quests (isDone) sink to the bottom with dimmed grey styling.
+  List<QuestItemData> get sortedQuests {
+    final state = dailyQuest.value;
+    final user = UserController.to.currentUser;
+    final rank = user?.rank ?? 'Novice';
+    final rankTarget =
+        GameConfig.rankTargets[rank] ?? GameConfig.rankTargets['Novice']!;
+
+    final exercises = (state != null && state.workoutExercises.isNotEmpty)
+        ? state.workoutExercises
+        : [GameConfig.workoutExercises[0], GameConfig.workoutExercises[2]];
+
+    final ex0 = exercises[0];
+    final ex1 = exercises.length > 1 ? exercises[1] : GameConfig.workoutExercises[1];
+
+    final reps0 = rankTarget.repsPerExercise[ex0] ?? 10;
+    final reps1 = rankTarget.repsPerExercise[ex1] ?? 15;
+
+    final bool workout0Done =
+        state != null && state.workoutCompleted.isNotEmpty && state.workoutCompleted[0];
+    final bool workout1Done =
+        state != null && state.workoutCompleted.length > 1 && state.workoutCompleted[1];
+    final bool studyDone = state?.studyCompleted ?? false;
+    final bool cardioDone = state?.cardioCompleted ?? false;
+    final bool groomingDone = state?.groomingCompleted ?? false;
+
+    final int studyIntReward = (rank == 'Apostle') ? 4 : 3;
+
+    final allQuests = [
+      // 1. Workout Quest 1
+      QuestItemData(
+        id: 'workout_0',
+        title: ex0,
+        subtitle: '${rankTarget.workoutSets} Sets × $reps0 Reps',
+        isDone: workout0Done,
+        rewardBadges: const [
+          QuestRewardBadge(label: '+2 STR', color: AppColors.str),
+          QuestRewardBadge(label: '+1 END', color: AppColors.end),
+        ],
+        type: QuestType.workout,
+        workoutIndex: 0,
+        route: AppRoutes.workoutDetail,
+        routeArguments: {'exercise': ex0, 'exerciseIndex': 0},
+      ),
+      // 2. Workout Quest 2
+      QuestItemData(
+        id: 'workout_1',
+        title: ex1,
+        subtitle: '${rankTarget.workoutSets} Sets × $reps1 Reps',
+        isDone: workout1Done,
+        rewardBadges: const [
+          QuestRewardBadge(label: '+2 STR', color: AppColors.str),
+          QuestRewardBadge(label: '+1 END', color: AppColors.end),
+        ],
+        type: QuestType.workout,
+        workoutIndex: 1,
+        route: AppRoutes.workoutDetail,
+        routeArguments: {'exercise': ex1, 'exerciseIndex': 1},
+      ),
+      // 3. Study Lock-In
+      QuestItemData(
+        id: 'study',
+        title: 'Lock-In Study',
+        subtitle: '${rankTarget.studyDurationMinutes} Minutes Deep Terminal',
+        isDone: studyDone,
+        rewardBadges: [
+          QuestRewardBadge(
+            label: '+$studyIntReward INT',
+            color: AppColors.intel,
+          ),
+        ],
+        type: QuestType.study,
+        route: AppRoutes.studyDetail,
+      ),
+      // 4. Cardio Run
+      QuestItemData(
+        id: 'cardio',
+        title: 'Cardio Run',
+        subtitle:
+            '${rankTarget.cardioDistanceKm.toStringAsFixed(1)} km Target Velocity',
+        isDone: cardioDone,
+        rewardBadges: const [
+          QuestRewardBadge(label: '+2 END', color: AppColors.end),
+          QuestRewardBadge(label: '+1 SPD', color: AppColors.spd), // ALWAYS SPD!
+        ],
+        type: QuestType.cardio,
+        route: AppRoutes.main, // Handled by NavigationController Tab 1
+      ),
+      // 5. Daily Grooming
+      QuestItemData(
+        id: 'grooming',
+        title: 'Daily Grooming',
+        subtitle: '${rankTarget.minGroomingItems} Items Protocol Minimum',
+        isDone: groomingDone,
+        rewardBadges: const [
+          QuestRewardBadge(label: '+3 APP', color: AppColors.app),
+        ],
+        type: QuestType.grooming,
+        route: AppRoutes.groomingDetail,
+      ),
+    ];
+
+    // Partition: Active quests first, Completed (DONE) quests at the bottom
+    final active = allQuests.where((q) => !q.isDone).toList();
+    final completed = allQuests.where((q) => q.isDone).toList();
+
+    return [...active, ...completed];
+  }
+
+  /// Dispatches navigation based on quest card tap
+  void handleQuestTap(QuestItemData quest) {
+    if (quest.type == QuestType.cardio) {
+      NavigationController.to.switchToMap();
+    } else {
+      Get.toNamed(quest.route, arguments: quest.routeArguments);
+    }
+  }
+}

@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
 import '../controller/user_controller.dart';
 import '../controller/auth_controller.dart';
+import '../controller/navigation_controller.dart';
+import '../controller/quote_controller.dart';
+import '../controller/quest_controller.dart';
 
 /// App Bindings for GetX Dependency Injection
 class InitialBinding extends Bindings {
@@ -28,6 +31,15 @@ class MainBinding extends Bindings {
     }
     if (!Get.isRegistered<AuthController>()) {
       Get.lazyPut<AuthController>(() => AuthController());
+    }
+    if (!Get.isRegistered<NavigationController>()) {
+      Get.put<NavigationController>(NavigationController());
+    }
+    if (!Get.isRegistered<QuoteController>()) {
+      Get.put<QuoteController>(QuoteController());
+    }
+    if (!Get.isRegistered<QuestController>()) {
+      Get.put<QuestController>(QuestController());
     }
   }
 }
