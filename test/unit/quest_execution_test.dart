@@ -344,18 +344,32 @@ void main() {
       // 4. Verify Rest Timer is initially READY (not active)
       expect(find.text('READY'), findsOneWidget);
 
-      // 5. Test incrementing reps
+      // 5. Verify Button is DISABLED when currentReps (0) < targetReps (8)
+      ElevatedButton btn = tester.widget(find.byType(ElevatedButton));
+      expect(btn.onPressed, isNull);
+
+      // 6. Test incrementing & decrementing reps
       await tester.tap(find.byIcon(Icons.add));
       await tester.pump();
       expect(find.text('1'), findsOneWidget);
 
-      // 6. Test decrementing reps
       await tester.tap(find.byIcon(Icons.remove));
       await tester.pump();
       expect(find.text('0'), findsOneWidget);
 
-      // 7. Complete Set 1 -> advances to Set 2 and resets reps to 0
-      await tester.tap(find.text('COMPLETE SET 1'));
+      // 7. Increment reps up to targetReps (8)
+      for (int i = 0; i < 8; i++) {
+        await tester.tap(find.byIcon(Icons.add));
+      }
+      await tester.pump();
+      expect(find.text('8'), findsOneWidget);
+
+      // 8. Now button is ENABLED
+      btn = tester.widget(find.byType(ElevatedButton));
+      expect(btn.onPressed, isNotNull);
+
+      // 9. Tap COMPLETE SET 1 -> advances to Set 2 and resets reps to 0
+      await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
       // In test mode, rest timer finishes immediately
@@ -363,6 +377,34 @@ void main() {
       expect(find.text('COMPLETE WORKOUT'), findsOneWidget);
       expect(find.text('0'), findsOneWidget); // Reps reset to 0!
       expect(find.text('50% CADENCE'), findsOneWidget);
+
+      // 10. Verify Button is DISABLED again until Set 2 reps are completed
+      btn = tester.widget(find.byType(ElevatedButton));
+      expect(btn.onPressed, isNull);
+    });
+
+    test('completeQuest strictly guards against repsCount < targetReps', () async {
+      final user = UserModel(
+        username: 'eager_novice',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+        exp: 0,
+      );
+      await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      userController.loadUser('eager_novice');
+
+      final result = await questController.completeQuest(
+        type: QuestType.workout,
+        exerciseName: 'Push Ups',
+        workoutIndex: 0,
+        repsCount: 4, // Below target of 8 reps
+      );
+
+      // Verify no rewards awarded and no progression applied
+      expect(result.expGained, 0);
+      expect(user.exp, 0);
+      expect(user.strength, 0);
     });
   });
 }

@@ -410,6 +410,25 @@ class QuestController extends GetxController {
 
     switch (type) {
       case QuestType.workout:
+        // Guard clause: strictly require full target reps completed before awarding quest
+        final rank = user.rank;
+        final rankTarget =
+            GameConfig.rankTargets[rank] ?? GameConfig.rankTargets['Novice']!;
+        final minTargetReps = rankTarget.repsPerExercise[exerciseName] ?? 8;
+        if (repsCount < minTargetReps) {
+          return const QuestCompletionResult(
+            levelUpResult: LevelUpResult(
+              newLevel: 1,
+              remainingExp: 0,
+              levelsGained: 0,
+              updatedStats: {},
+            ),
+            fullClearAchieved: false,
+            expGained: 0,
+            statRewards: {},
+          );
+        }
+
         title = exerciseName ?? 'Push Ups';
         metricSummary = '$repsCount REPS · BODYWEIGHT';
         statRewards['STR'] = 2;

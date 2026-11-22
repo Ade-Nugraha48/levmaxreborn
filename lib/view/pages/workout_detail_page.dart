@@ -104,11 +104,12 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   }
 
   Future<void> _handleCompleteSet() async {
-    if (isSubmitting) return;
+    // Guard clause: strictly require targetReps reached and not resting or submitting
+    if (isSubmitting || isResting || currentReps < targetReps) {
+      return;
+    }
 
-    // Record reps completed in this set (if currentReps was dialed, use it; otherwise targetReps)
-    final repsForThisSet = currentReps > 0 ? currentReps : targetReps;
-    _totalRepsAccumulated += repsForThisSet;
+    _totalRepsAccumulated += currentReps;
 
     if (currentSet < totalSets) {
       setState(() {
@@ -188,6 +189,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   Widget build(BuildContext context) {
     final cadencePercent =
         ((currentSet - 1) / totalSets * 100).toInt().clamp(0, 100);
+    final bool canComplete =
+        !isSubmitting && !isResting && currentReps >= targetReps;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -603,15 +606,19 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: isSubmitting ? null : _handleCompleteSet,
+                          onPressed: canComplete ? _handleCompleteSet : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.background,
+                            disabledBackgroundColor: const Color(0xFF1E2538),
+                            disabledForegroundColor: AppColors.textSecondary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            elevation: 4,
-                            shadowColor: AppColors.primary.withValues(alpha: 0.5),
+                            elevation: canComplete ? 4 : 0,
+                            shadowColor: canComplete
+                                ? AppColors.primary.withValues(alpha: 0.5)
+                                : Colors.transparent,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -621,13 +628,17 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                     ? 'COMPLETE SET $currentSet'
                                     : 'COMPLETE WORKOUT',
                                 style: AppTextStyles.buttonCinzel(
-                                  color: AppColors.background,
+                                  color: canComplete
+                                      ? AppColors.background
+                                      : AppColors.textSecondary,
                                 ).copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(
+                              Icon(
                                 Icons.done_all,
-                                color: AppColors.background,
+                                color: canComplete
+                                    ? AppColors.background
+                                    : AppColors.textSecondary,
                                 size: 18,
                               ),
                             ],
@@ -636,12 +647,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        currentSet < totalSets
-                            ? 'TAP TO COMPLETE SET · REST TIMER ENGAGES NEXT'
-                            : 'FINAL SET COMPLETES QUEST & CLAIMS REWARDS',
+                        isResting
+                            ? 'REST TIMER ACTIVE · STANDBY OR SKIP REST TO PROCEED'
+                            : (currentReps < targetReps
+                                ? 'REPETITIONS INCOMPLETE · REACH TARGET ($currentReps / $targetReps) TO UNLOCK'
+                                : (currentSet < totalSets
+                                    ? 'TAP TO COMPLETE SET $currentSet · REST TIMER ENGAGES NEXT'
+                                    : 'FINAL SET COMPLETE · TAP TO FINISH WORKOUT & CLAIM REWARDS')),
                         textAlign: TextAlign.center,
                         style: AppTextStyles.labelMonoSmall(
-                          color: AppColors.textSecondary,
+                          color: canComplete
+                              ? AppColors.secondary
+                              : AppColors.textSecondary,
                         ).copyWith(fontSize: 9),
                       ),
                     ],
