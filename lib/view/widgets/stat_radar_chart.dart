@@ -93,6 +93,10 @@ class StatRadarChart extends StatelessWidget {
                   width: 1,
                 ),
                 tickCount: 3,
+                ticksTextStyle: const TextStyle(
+                  color: Colors.transparent,
+                  fontSize: 0,
+                ),
                 titlePositionPercentageOffset: 0.22,
                 titleTextStyle: AppTextStyles.labelMonoSmall(
                   color: AppColors.textSecondary,

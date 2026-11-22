@@ -154,16 +154,19 @@ class CardioPage extends StatelessWidget {
                 maxZoom: 18.0,
               ),
               children: [
-                // Dark Matrix Filtered OpenStreetMap Tiles
+                // CartoDB Dark Matter Tiles (Void Black / Cyberpunk Dark Mode)
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.levmax.app',
+                  maxZoom: 19,
                   tileBuilder: (context, tileWidget, tile) {
                     return ColorFiltered(
                       colorFilter: const ColorFilter.matrix([
-                        -0.8, 0, 0, 0, 255,
-                        0, -0.8, 0, 0, 255,
-                        0, 0, -0.8, 0, 255,
+                        0.75, 0, 0, 0, -20,
+                        0, 0.75, 0, 0, -20,
+                        0, 0, 0.85, 0, -10,
                         0, 0, 0, 1, 0,
                       ]),
                       child: tileWidget,
@@ -208,6 +211,25 @@ class CardioPage extends StatelessWidget {
                     ],
                   ),
               ],
+            ),
+
+            // Subtle dark edge gradient for seamless blending into void black borders
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.15,
+                      colors: [
+                        Colors.transparent,
+                        const Color(0xFF0A0B0E).withValues(alpha: 0.55),
+                      ],
+                      stops: const [0.75, 1.0],
+                    ),
+                  ),
+                ),
+              ),
             ),
 
             // Floating Weather & Target Overlay HUD Pill
@@ -318,25 +340,33 @@ class CardioPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Weather readout
-          Row(
-            children: [
-              const Icon(
-                Icons.wb_sunny_outlined,
-                size: 15,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                weatherText,
-                style: GoogleFonts.dotGothic16(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                  color: AppColors.textPrimary,
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.wb_sunny_outlined,
+                  size: 15,
+                  color: AppColors.textSecondary,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    weatherText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dotGothic16(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
 
           // Target distance in Yellow
           Text(
@@ -618,6 +648,7 @@ class CardioPage extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDone ? AppColors.surfaceElevated : AppColors.primary,
                   disabledBackgroundColor: AppColors.surfaceElevated,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                     side: BorderSide(
@@ -627,25 +658,28 @@ class CardioPage extends StatelessWidget {
                   elevation: isDone ? 0 : 4,
                   shadowColor: isDone ? null : AppColors.primary.withValues(alpha: 0.4),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isDone ? Icons.done_all : Icons.play_arrow,
-                      size: 20,
-                      color: isDone ? AppColors.secondary : const Color(0xFF05060A),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isDone ? 'CARDIO PROTOCOL COMMITTED' : 'START CARDIO',
-                      style: GoogleFonts.cinzel(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2.0,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isDone ? Icons.done_all : Icons.play_arrow,
+                        size: 20,
                         color: isDone ? AppColors.secondary : const Color(0xFF05060A),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        isDone ? 'CARDIO PROTOCOL COMMITTED' : 'START CARDIO',
+                        style: GoogleFonts.cinzel(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2.0,
+                          color: isDone ? AppColors.secondary : const Color(0xFF05060A),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -661,6 +695,7 @@ class CardioPage extends StatelessWidget {
                       onPressed: () => controller.togglePause(),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: AppColors.surfaceElevated,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
                         side: BorderSide(
                           color: isPaused ? AppColors.primary : AppColors.borderHairline,
                         ),
@@ -668,25 +703,29 @@ class CardioPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isPaused ? Icons.play_arrow : Icons.pause,
-                            size: 18,
-                            color: isPaused ? AppColors.primary : AppColors.textPrimary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isPaused ? 'RESUME' : 'PAUSE',
-                            style: GoogleFonts.dotGothic16(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPaused ? Icons.play_arrow : Icons.pause,
+                              size: 18,
                               color: isPaused ? AppColors.primary : AppColors.textPrimary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              isPaused ? 'RESUME' : 'PAUSE',
+                              style: GoogleFonts.dotGothic16(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                                color: isPaused ? AppColors.primary : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -701,31 +740,36 @@ class CardioPage extends StatelessWidget {
                       onPressed: () => _handleFinishRun(context, controller),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),
                         elevation: 4,
                         shadowColor: AppColors.primary.withValues(alpha: 0.4),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.stop,
-                            size: 18,
-                            color: Color(0xFF05060A),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'FINISH RUN',
-                            style: GoogleFonts.cinzel(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                              color: const Color(0xFF05060A),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.stop,
+                              size: 18,
+                              color: Color(0xFF05060A),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              'FINISH RUN',
+                              style: GoogleFonts.cinzel(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                                color: const Color(0xFF05060A),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
