@@ -52,6 +52,17 @@ class AppTextStyles {
       );
 
   // DotGothic16 - Telemetry & Numbers (Tabular Figures)
+  static TextStyle telemetryDotGothic({
+    double fontSize = 16,
+    Color color = AppColors.textPrimary,
+  }) =>
+      GoogleFonts.dotGothic16(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w400,
+        color: color,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
   static TextStyle timerDisplay({Color color = AppColors.primary}) =>
       GoogleFonts.dotGothic16(
         fontSize: 36,

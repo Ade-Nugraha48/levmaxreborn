@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'core/theme/app_theme.dart';
+import 'routes/app_pages.dart';
+import 'routes/app_bindings.dart';
 import 'service/hive_service.dart';
 import 'service/session_service.dart';
 
@@ -23,14 +25,9 @@ class LevMaxApp extends StatelessWidget {
       title: 'LEVMAX',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'LEVMAX SYSTEM INITIALIZED',
-            style: TextStyle(letterSpacing: 2.0),
-          ),
-        ),
-      ),
+      initialBinding: InitialBinding(),
+      initialRoute: AppPages.initial,
+      getPages: AppPages.pages,
     );
   }
 }
