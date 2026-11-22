@@ -154,19 +154,16 @@ class CardioPage extends StatelessWidget {
                 maxZoom: 18.0,
               ),
               children: [
-                // CartoDB Dark Matter Tiles (Void Black / Cyberpunk Dark Mode)
+                // Free Public OpenStreetMap with Luminance-Desaturated Cyberpunk Dark Matrix (No API Key Required)
                 TileLayer(
-                  urlTemplate:
-                      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c', 'd'],
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.levmax.app',
-                  maxZoom: 19,
                   tileBuilder: (context, tileWidget, tile) {
                     return ColorFiltered(
                       colorFilter: const ColorFilter.matrix([
-                        0.75, 0, 0, 0, -20,
-                        0, 0.75, 0, 0, -20,
-                        0, 0, 0.85, 0, -10,
+                        -0.087, -0.293, -0.030, 0, 106,
+                        -0.087, -0.293, -0.030, 0, 108,
+                        -0.087, -0.293, -0.030, 0, 120,
                         0, 0, 0, 1, 0,
                       ]),
                       child: tileWidget,
