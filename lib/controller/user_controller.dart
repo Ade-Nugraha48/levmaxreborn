@@ -224,6 +224,15 @@ class UserController extends GetxController {
     }
   }
 
+  /// Restores user HP to 100 (Developer Demo Mode)
+  Future<void> restoreHp() async {
+    final u = user.value;
+    if (u == null) return;
+    u.hp = 100;
+    await saveUser();
+    user.refresh();
+  }
+
   /// Adds EXP directly (e.g. for Developer Demo Mode)
   Future<LevelUpResult> addExp(int expToAdd) async {
     return applyQuestReward(expGained: expToAdd);

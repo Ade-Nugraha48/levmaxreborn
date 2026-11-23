@@ -224,6 +224,22 @@ void main() {
       expect(userController.currentUser!.strength, equals(49));
     });
 
+    test('restoreHp restores user HP to 100', () async {
+      final user = UserModel(
+        username: 'wounded_hunter',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+        hp: 32,
+      );
+      await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      userController.loadUser('wounded_hunter');
+      expect(userController.currentUser!.hp, equals(32));
+
+      await userController.restoreHp();
+      expect(userController.currentUser!.hp, equals(100));
+    });
+
     test('+50 All Stats increases all 6 attributes and triggers rank recalculation',
         () async {
       final user = UserModel(

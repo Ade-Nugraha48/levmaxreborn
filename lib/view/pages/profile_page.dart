@@ -484,17 +484,19 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: Column(
                 children: [
-                  // Row 1: Penalty Simulations (-34 HP & +3 Days)
+                  // Row 1: Penalty & Health Simulation (-34 HP & Restore HP)
                   Row(
                     children: [
                       Expanded(
                         child: _buildDevButton(
-                          label: '-34 HP (MISSED 1 DAY)',
+                          label: '-34 HP (MISSED DAY)',
                           color: AppColors.errorRed,
                           onPressed: () async {
-                            final currentHp = _userController.currentUser?.hp ?? 100;
+                            final currentHp =
+                                _userController.currentUser?.hp ?? 100;
                             await _userController.deductHp(34);
-                            final newHp = _userController.currentUser?.hp ?? 100;
+                            final newHp =
+                                _userController.currentUser?.hp ?? 100;
                             Get.snackbar(
                               'SIMULATION: MISSED DAY',
                               newHp == 100
@@ -510,6 +512,32 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildDevButton(
+                          label: 'RESTORE HP (100)',
+                          color: AppColors.end,
+                          onPressed: () async {
+                            await _userController.restoreHp();
+                            Get.snackbar(
+                              'SIMULATION: HEAL',
+                              'HP restored to maximum capacity (100 HP).',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.surfaceElevated,
+                              colorText: AppColors.textPrimary,
+                              borderColor: AppColors.end,
+                              borderWidth: 1,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Row 2: Inactivity Penalty & Stats Boost
+                  Row(
+                    children: [
                       Expanded(
                         child: _buildDevButton(
                           label: '+3 DAYS PENALTY',
@@ -528,14 +556,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Row 2: Stats & Level Up Boost
-                  Row(
-                    children: [
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildDevButton(
                           label: '+50 ALL STATS',
@@ -554,7 +575,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Row 3: EXP Level Up & Cardio Simulation
+                  Row(
+                    children: [
                       Expanded(
                         child: _buildDevButton(
                           label: '+300 EXP (LEVEL UP)',
@@ -575,14 +603,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Row 3: Cardio Simulation
-                  Row(
-                    children: [
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildDevButton(
                           label: 'SIMULATE CARDIO +500M',
@@ -662,21 +683,26 @@ class _ProfilePageState extends State<ProfilePage> {
     required Color color,
     required VoidCallback onPressed,
   }) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: color.withValues(alpha: 0.4), width: 1),
-        backgroundColor: AppColors.background,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: AppTextStyles.dotGothic(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: color,
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: color.withValues(alpha: 0.4), width: 1),
+          backgroundColor: AppColors.background,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.dotGothic(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ),
       ),
     );
