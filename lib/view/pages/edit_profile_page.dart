@@ -185,7 +185,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: 32),
 
                     // Save Changes CTA
-                    _buildSaveButton(),
+                    _buildSaveButton(context),
                   ],
                 ),
               ),
@@ -428,13 +428,129 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildSaveButton() {
+  void _confirmSaveChanges(BuildContext context) {
+    final currentUsername = _userController.currentUser?.username ?? '';
+    final newUsername = _usernameController.text.trim();
+    final newPassword = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    // Validate Username
+    if (newUsername.isEmpty) {
+      Get.snackbar(
+        'VALIDATION ERROR',
+        'Username protocol cannot be blank.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.surfaceElevated,
+        colorText: AppColors.textPrimary,
+        borderColor: AppColors.errorRed,
+        borderWidth: 1,
+      );
+      return;
+    }
+
+    if (newUsername != currentUsername) {
+      if (HiveService.usersBox.containsKey(newUsername)) {
+        Get.snackbar(
+          'PROTOCOL CONFLICT',
+          'Username already registered by another operative.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.surfaceElevated,
+          colorText: AppColors.textPrimary,
+          borderColor: AppColors.errorRed,
+          borderWidth: 1,
+        );
+        return;
+      }
+    }
+
+    // Validate Password (if provided)
+    if (newPassword.isNotEmpty) {
+      if (newPassword.length < 6) {
+        Get.snackbar(
+          'SECURITY WARNING',
+          'Password requires a minimum of 6 characters.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.surfaceElevated,
+          colorText: AppColors.textPrimary,
+          borderColor: AppColors.errorRed,
+          borderWidth: 1,
+        );
+        return;
+      }
+      if (newPassword != confirmPassword) {
+        Get.snackbar(
+          'VERIFICATION FAILED',
+          'Password confirmation does not match.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.surfaceElevated,
+          colorText: AppColors.textPrimary,
+          borderColor: AppColors.errorRed,
+          borderWidth: 1,
+        );
+        return;
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.borderHairline, width: 1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text(
+          'KONFIRMASI PEMBARUAN',
+          style: AppTextStyles.cinzel(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+            letterSpacing: 1.5,
+          ),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin memperbarui data profil ini?',
+          style: AppTextStyles.bodySmall(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'BATAL',
+              style: AppTextStyles.button(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _saveChanges();
+            },
+            child: Text(
+              'SIMPAN',
+              style: AppTextStyles.button(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(BuildContext context) {
     return Obx(() {
       return SizedBox(
         width: double.infinity,
         height: 48,
         child: ElevatedButton(
-          onPressed: _isLoading.value ? null : _saveChanges,
+          onPressed: _isLoading.value ? null : () => _confirmSaveChanges(context),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,

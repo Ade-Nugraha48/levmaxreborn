@@ -74,9 +74,12 @@ void main() {
       await NotificationService.showAchievementUnlocked(
         achievementTitle: 'THE AWAKENING',
       );
+      await NotificationService.showProfileUpdated(
+        username: 'SOLO_HUNTER',
+      );
 
       final history = NotificationService.sentHistory;
-      expect(history.length, equals(4));
+      expect(history.length, equals(5));
 
       // Quest Complete
       expect(history[0].id, equals(NotificationService.idQuestCompleted));
@@ -94,6 +97,11 @@ void main() {
       // Achievement
       expect(history[3].id, equals(NotificationService.idAchievement));
       expect(history[3].title, contains('THE AWAKENING'));
+
+      // Profile Updated
+      expect(history[4].id, equals(NotificationService.idProfileUpdated));
+      expect(history[4].title, contains('SOLO_HUNTER'));
+      expect(history[4].body, contains('recalibrated'));
     });
 
     test('NotificationService arms and disarms 19:00 Scheduled Daily Reminder',
@@ -145,6 +153,13 @@ void main() {
 
       // Verify SharedPreferences updated active username
       expect(SessionService.activeUsername, equals('shadow_stalker'));
+
+      // Verify NotificationService fired profile update notification
+      final profileNotifs = NotificationService.sentHistory
+          .where((n) => n.id == NotificationService.idProfileUpdated)
+          .toList();
+      expect(profileNotifs.isNotEmpty, isTrue);
+      expect(profileNotifs.last.title, contains('SHADOW_STALKER'));
     });
   });
 

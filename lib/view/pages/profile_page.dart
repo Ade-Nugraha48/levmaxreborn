@@ -87,7 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 28),
 
                       // 4. Ghost Logout Action
-                      _buildLogoutButton(),
+                      _buildLogoutButton(context),
 
                       const SizedBox(height: 24),
                     ],
@@ -652,12 +652,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildLogoutButton() {
+  Widget _buildLogoutButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: OutlinedButton.icon(
-        onPressed: () => _authController.logout(),
+        onPressed: () => _confirmLogout(context),
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Color(0xFF33343A), width: 1),
           backgroundColor: AppColors.surface,
@@ -673,6 +673,60 @@ class _ProfilePageState extends State<ProfilePage> {
             letterSpacing: 2.0,
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.borderHairline, width: 1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text(
+          'KONFIRMASI LOGOUT',
+          style: AppTextStyles.cinzel(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.errorRed,
+            letterSpacing: 1.5,
+          ),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin keluar dari sesi sistem LEVMAX?',
+          style: AppTextStyles.bodySmall(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'BATAL',
+              style: AppTextStyles.button(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _authController.logout();
+            },
+            child: Text(
+              'LOGOUT',
+              style: AppTextStyles.button(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

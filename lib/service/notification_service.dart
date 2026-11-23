@@ -51,6 +51,7 @@ class NotificationService {
   static const int idLevelUp = 102;
   static const int idRankUp = 103;
   static const int idAchievement = 104;
+  static const int idProfileUpdated = 105;
   static const int idDailyReminder = 201;
 
   /// Initializes plugin and timezone databases
@@ -171,6 +172,17 @@ class NotificationService {
       id: idAchievement,
       title: 'HONOR UNLOCKED: ${achievementTitle.toUpperCase()}',
       body: 'New achievement added to System Codex honors.',
+    );
+  }
+
+  /// Triggered when Operative profile credentials or biometrics are updated
+  static Future<void> showProfileUpdated({
+    required String username,
+  }) async {
+    await showImmediate(
+      id: idProfileUpdated,
+      title: 'PROFILE UPDATED: ${username.toUpperCase()}',
+      body: 'Operative credentials and biometric data successfully recalibrated.',
     );
   }
 

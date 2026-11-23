@@ -28,9 +28,7 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    usernameController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
+    // Keep controllers intact to prevent disposal crashes during route transitions
     super.onClose();
   }
 

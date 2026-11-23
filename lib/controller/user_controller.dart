@@ -270,5 +270,8 @@ class UserController extends GetxController {
       await saveUser();
     }
     user.refresh();
+    await NotificationService.showProfileUpdated(
+      username: newUsername ?? u.username,
+    );
   }
 }

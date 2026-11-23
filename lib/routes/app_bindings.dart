@@ -22,7 +22,7 @@ class AuthBinding extends Bindings {
     if (!Get.isRegistered<UserController>()) {
       Get.put<UserController>(UserController(), permanent: true);
     }
-    Get.lazyPut<AuthController>(() => AuthController());
+    Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
   }
 }
 
