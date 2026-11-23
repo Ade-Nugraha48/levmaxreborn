@@ -165,11 +165,16 @@ void main() {
       expect(userGrooming.any((item) => item.title == 'DRINK 2L WATER'), isTrue);
       expect(userGrooming.any((item) => item.title == 'APPLY SUNSCREEN'), isTrue);
 
-      // 5. SharedPreferences session updated
+      // 5. Session remains logged out so user enters login page
+      expect(SessionService.isLoggedIn, isFalse);
+
+      // 6. User can now manually log in
+      authController.usernameController.text = 'sung_jinwoo';
+      authController.passwordController.text = 'shadowmonarch';
+      final loginSuccess = await authController.login();
+      expect(loginSuccess, isTrue);
       expect(SessionService.isLoggedIn, isTrue);
       expect(SessionService.activeUsername, equals('sung_jinwoo'));
-
-      // 6. UserController has user loaded
       expect(userController.hasUser, isTrue);
       expect(userController.username, equals('sung_jinwoo'));
     });

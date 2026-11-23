@@ -175,15 +175,29 @@ class AuthController extends GetxController {
         await HiveService.groomingItemsBox.add(item);
       }
 
-      // Save active session in SharedPreferences
-      await SessionService.setIsLoggedIn(true);
-      await SessionService.setActiveUsername(username);
-
-      // Load user into reactive UserController
-      UserController.to.loadUser(username);
+      // Do not auto-login; ensure session is logged out so user enters login page
+      await SessionService.setIsLoggedIn(false);
+      await SessionService.setActiveUsername('');
 
       clearInputs();
-      Get.offAllNamed(AppRoutes.main);
+
+      if (!Get.testMode) {
+        Get.snackbar(
+          'REGISTRATION SUCCESSFUL',
+          'Operative identity registered. Enter credentials to log in.',
+          backgroundColor: AppColors.surfaceElevated,
+          colorText: AppColors.primary,
+          borderColor: AppColors.primary,
+          borderWidth: 1,
+          borderRadius: 4,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(13),
+          duration: const Duration(seconds: 4),
+          icon: const Icon(Icons.check_circle_outline, color: AppColors.primary),
+        );
+      }
+
+      Get.offAllNamed(AppRoutes.login);
       return true;
     } finally {
       isLoading.value = false;

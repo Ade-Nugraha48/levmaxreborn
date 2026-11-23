@@ -393,6 +393,34 @@ void main() {
       // 10. Verify Button is DISABLED again until Set 2 reps are completed
       btn = tester.widget(find.byType(ElevatedButton));
       expect(btn.onPressed, isNull);
+
+      // 11. Complete Set 2 reps (8 reps) -> Cadence reaches 100%
+      for (int i = 0; i < 8; i++) {
+        await tester.tap(find.byIcon(Icons.add));
+      }
+      await tester.pump();
+      expect(find.text('8'), findsOneWidget);
+      expect(find.text('100% CADENCE'), findsOneWidget);
+
+      // 12. Tap COMPLETE WORKOUT -> Triggers completion dialog
+      btn = tester.widget(find.byType(ElevatedButton));
+      expect(btn.onPressed, isNotNull);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.byType(ElevatedButton));
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pump();
+
+      expect(find.text('WORKOUT PROTOCOL COMPLETE'), findsOneWidget);
+      expect(find.text('100% COMPLETE'), findsOneWidget);
+      expect(find.text('SELESAI'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('SELESAI'));
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
     });
 
     test('completeQuest strictly guards against repsCount < targetReps', () async {

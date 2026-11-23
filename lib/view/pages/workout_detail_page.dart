@@ -30,6 +30,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   int restSecondsLeft = 30;
   Timer? _restTimer;
   bool isSubmitting = false;
+  bool isWorkoutCompleted = false;
   int _totalRepsAccumulated = 0;
 
   @override
@@ -41,6 +42,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     isResting = false;
     restSecondsLeft = 30;
     isSubmitting = false;
+    isWorkoutCompleted = false;
     _totalRepsAccumulated = 0;
 
     final args = Get.arguments as Map<String, dynamic>?;
@@ -116,8 +118,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   }
 
   Future<void> _handleCompleteSet() async {
-    // Guard clause: strictly require targetReps reached and not resting or submitting
-    if (isSubmitting || isResting || currentReps < targetReps) {
+    // Guard clause: strictly require targetReps reached and not resting, submitting, or already completed
+    if (isSubmitting || isWorkoutCompleted || isResting || currentReps < targetReps) {
       return;
     }
 
@@ -145,68 +147,244 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
 
       if (!mounted) return;
 
-      // Celebrate completion / Level Up
-      if (result.levelUpResult.didLevelUp) {
-        await Get.defaultDialog(
-          title: 'LEVEL UP!',
-          titleStyle: AppTextStyles.headingSmall(color: AppColors.highlightYellow),
-          backgroundColor: AppColors.surface,
-          radius: 4,
-          content: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              children: [
-                Text(
-                  'ACHIEVED LEVEL ${result.levelUpResult.newLevel}',
-                  style: AppTextStyles.telemetryDotGothic(
-                    fontSize: 16,
-                    color: AppColors.highlightYellow,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '+2 TO ALL 6 ATTRIBUTES\n(STR, END, SPD, INT, WIL, APP)',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyDefault(color: AppColors.textPrimary),
-                ),
-              ],
-            ),
-          ),
-          confirm: TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'CONTINUE',
-              style: AppTextStyles.buttonCinzel(color: AppColors.primary),
-            ),
-          ),
-        );
-      } else {
-        Get.snackbar(
-          'QUEST COMPLETED',
-          '+2 STR · +1 END · +25 EXP ACQUIRED',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.surface,
-          colorText: AppColors.textPrimary,
-          borderColor: AppColors.primary,
-          borderWidth: 1,
-          duration: const Duration(seconds: 2),
-        );
-      }
+      setState(() {
+        isWorkoutCompleted = true;
+        isSubmitting = false;
+      });
 
-      Get.back();
+      // Show dedicated completion modal dialog
+      await _showCompletionDialog(context, result, totalRepsCompleted);
     }
+  }
+
+  Future<void> _showCompletionDialog(
+    BuildContext context,
+    QuestCompletionResult result,
+    int totalRepsCompleted,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.secondary, width: 1.5),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Center(
+          child: Column(
+            children: [
+              Icon(
+                result.levelUpResult.didLevelUp
+                    ? Icons.military_tech
+                    : Icons.check_circle_outline,
+                size: 38,
+                color: result.levelUpResult.didLevelUp
+                    ? AppColors.highlightYellow
+                    : AppColors.secondary,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                result.levelUpResult.didLevelUp
+                    ? 'LEVEL UP ASCENSION'
+                    : 'WORKOUT PROTOCOL COMPLETE',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.cinzel(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: result.levelUpResult.didLevelUp
+                      ? AppColors.highlightYellow
+                      : AppColors.textPrimary,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${exerciseName.toUpperCase()} · $totalSets SETS COMPLETED',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.cinzel(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.borderHairline),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'TOTAL VOLUME',
+                        style: AppTextStyles.labelMonoSmall(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '$totalRepsCompleted REPS',
+                        style: AppTextStyles.telemetryDotGothic(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'CADENCE STATUS',
+                        style: AppTextStyles.labelMonoSmall(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '100% COMPLETE',
+                        style: AppTextStyles.telemetryDotGothic(
+                          fontSize: 13,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'REWARDS ACQUIRED',
+                        style: AppTextStyles.labelMonoSmall(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            '+2 STR',
+                            style: AppTextStyles.telemetryDotGothic(
+                              fontSize: 12,
+                              color: AppColors.str,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            '·',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+1 END',
+                            style: AppTextStyles.telemetryDotGothic(
+                              fontSize: 12,
+                              color: AppColors.end,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            '·',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+${result.expGained} EXP',
+                            style: AppTextStyles.telemetryDotGothic(
+                              fontSize: 12,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (result.levelUpResult.didLevelUp) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.highlightYellow.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(color: AppColors.highlightYellow),
+                      ),
+                      child: Text(
+                        'ASCENDED TO LV. ${result.levelUpResult.newLevel} (+2 ALL ATTRIBUTES)',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.telemetryDotGothic(
+                          fontSize: 10,
+                          color: AppColors.highlightYellow,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Get.back();
+              },
+              child: Text(
+                'SELESAI',
+                style: AppTextStyles.cinzel(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final cadencePercent =
-        ((currentSet - 1) / totalSets * 100).toInt().clamp(0, 100);
-    final bool canComplete =
-        !isSubmitting && !isResting && currentReps >= targetReps;
+    final totalTargetReps = totalSets * targetReps;
+    final totalDoneReps = isWorkoutCompleted
+        ? totalTargetReps
+        : _totalRepsAccumulated + currentReps;
+    final cadencePercent = totalTargetReps > 0
+        ? ((totalDoneReps / totalTargetReps) * 100).toInt().clamp(0, 100)
+        : 0;
+    final bool canComplete = !isWorkoutCompleted &&
+        !isSubmitting &&
+        !isResting &&
+        currentReps >= targetReps;
     final bool canDecrement =
-        currentReps > 0 && !isResting && !isSubmitting;
+        !isWorkoutCompleted && currentReps > 0 && !isResting && !isSubmitting;
     final bool canIncrement =
-        currentReps < targetReps && !isResting && !isSubmitting;
+        !isWorkoutCompleted && currentReps < targetReps && !isResting && !isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -279,9 +457,13 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                         children: [
                           Row(
                             children: List.generate(totalSets, (index) {
-                              // Only previously completed sets are filled solid Cyan
-                              final bool isCompleted = index < currentSet - 1;
-                              final bool isCurrent = index == currentSet - 1;
+                              // A set is completed if previously completed, or current set with full reps, or overall completed
+                              final bool isCompleted = isWorkoutCompleted ||
+                                  index < currentSet - 1 ||
+                                  (index == currentSet - 1 &&
+                                      currentReps >= targetReps);
+                              final bool isCurrent =
+                                  index == currentSet - 1 && !isCompleted;
                               final Color segColor = isCompleted
                                   ? AppColors.secondary
                                   : (isCurrent && isResting
@@ -300,8 +482,9 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                                         ? [
                                             BoxShadow(
                                               color: AppColors.secondary
-                                                  .withValues(alpha: 0.5),
+                                                  .withValues(alpha: 0.6),
                                               blurRadius: 6,
+                                              spreadRadius: 0.5,
                                             ),
                                           ]
                                         : null,
@@ -315,7 +498,9 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'CURRENT: SET 0$currentSet OF 0$totalSets',
+                                isWorkoutCompleted
+                                    ? 'STATUS: ALL $totalSets SETS COMPLETED'
+                                    : 'CURRENT: SET 0$currentSet OF 0$totalSets',
                                 style: AppTextStyles.telemetryDotGothic(
                                   fontSize: 11,
                                   color: AppColors.secondary,
@@ -624,12 +809,19 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                         child: ElevatedButton(
                           onPressed: canComplete ? _handleCompleteSet : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.background,
+                            backgroundColor: isWorkoutCompleted
+                                ? AppColors.surfaceElevated
+                                : AppColors.primary,
+                            foregroundColor: isWorkoutCompleted
+                                ? AppColors.secondary
+                                : AppColors.background,
                             disabledBackgroundColor: const Color(0xFF1E2538),
                             disabledForegroundColor: AppColors.textSecondary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
+                              side: isWorkoutCompleted
+                                  ? const BorderSide(color: AppColors.secondary, width: 1)
+                                  : BorderSide.none,
                             ),
                             elevation: canComplete ? 4 : 0,
                             shadowColor: canComplete
@@ -640,21 +832,27 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                currentSet < totalSets
-                                    ? 'COMPLETE SET $currentSet'
-                                    : 'COMPLETE WORKOUT',
+                                isWorkoutCompleted
+                                    ? 'WORKOUT COMPLETED'
+                                    : (currentSet < totalSets
+                                        ? 'COMPLETE SET $currentSet'
+                                        : 'COMPLETE WORKOUT'),
                                 style: AppTextStyles.buttonCinzel(
-                                  color: canComplete
-                                      ? AppColors.background
-                                      : AppColors.textSecondary,
+                                  color: isWorkoutCompleted
+                                      ? AppColors.secondary
+                                      : (canComplete
+                                          ? AppColors.background
+                                          : AppColors.textSecondary),
                                 ).copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 8),
                               Icon(
                                 Icons.done_all,
-                                color: canComplete
-                                    ? AppColors.background
-                                    : AppColors.textSecondary,
+                                color: isWorkoutCompleted
+                                    ? AppColors.secondary
+                                    : (canComplete
+                                        ? AppColors.background
+                                        : AppColors.textSecondary),
                                 size: 18,
                               ),
                             ],
@@ -663,16 +861,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isResting
-                            ? 'REST TIMER ACTIVE · STANDBY OR SKIP REST TO PROCEED'
-                            : (currentReps < targetReps
-                                ? 'REPETITIONS INCOMPLETE · REACH TARGET ($currentReps / $targetReps) TO UNLOCK'
-                                : (currentSet < totalSets
-                                    ? 'TAP TO COMPLETE SET $currentSet · REST TIMER ENGAGES NEXT'
-                                    : 'FINAL SET COMPLETE · TAP TO FINISH WORKOUT & CLAIM REWARDS')),
+                        isWorkoutCompleted
+                            ? 'WORKOUT PROTOCOL COMPLETED · SESSION CLEARED'
+                            : (isResting
+                                ? 'REST TIMER ACTIVE · STANDBY OR SKIP REST TO PROCEED'
+                                : (currentReps < targetReps
+                                    ? 'REPETITIONS INCOMPLETE · REACH TARGET ($currentReps / $targetReps) TO UNLOCK'
+                                    : (currentSet < totalSets
+                                        ? 'TAP TO COMPLETE SET $currentSet · REST TIMER ENGAGES NEXT'
+                                        : 'FINAL SET COMPLETE · TAP TO FINISH WORKOUT & CLAIM REWARDS'))),
                         textAlign: TextAlign.center,
                         style: AppTextStyles.labelMonoSmall(
-                          color: canComplete
+                          color: (canComplete || isWorkoutCompleted)
                               ? AppColors.secondary
                               : AppColors.textSecondary,
                         ).copyWith(fontSize: 9),
