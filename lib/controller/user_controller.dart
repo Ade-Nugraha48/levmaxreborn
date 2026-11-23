@@ -85,7 +85,7 @@ class UserController extends GetxController {
 
     final oldRank = u.rank;
 
-    // 1. Add direct stat rewards
+    // 1. Tambah poin atribut langsung dari reward quest (misal: Workout nambah STR & END)
     if (statRewards != null) {
       u.strength += statRewards['STR'] ?? 0;
       u.endurance += statRewards['END'] ?? 0;
@@ -95,10 +95,10 @@ class UserController extends GetxController {
       u.appearance += statRewards['APP'] ?? 0;
     }
 
-    // 2. Add EXP
+    // 2. Tambah EXP dari quest
     final totalExp = u.exp + expGained;
 
-    // 3. Process Level Up
+    // 3. Cek apakah EXP cukup buat naik level (pakai rumus kuadratik)
     final levelUpResult = StatCalculator.calculateLevelUp(
       currentLevel: u.level,
       currentExp: totalExp,
@@ -109,7 +109,7 @@ class UserController extends GetxController {
       u.level = levelUpResult.newLevel;
       u.exp = levelUpResult.remainingExp;
 
-      // Update stats from level up (+2 to all 6 stats per level)
+      // Bonus naik level: otomatis nambah +2 ke semua 6 atribut stat
       u.strength = levelUpResult.updatedStats['STR'] ?? u.strength;
       u.endurance = levelUpResult.updatedStats['END'] ?? u.endurance;
       u.speed = levelUpResult.updatedStats['SPD'] ?? u.speed;
@@ -122,7 +122,7 @@ class UserController extends GetxController {
       u.exp = totalExp;
     }
 
-    // 4. Check Rank Progression
+    // 4. Cek kenaikan rank (Novice -> Awakened -> Pioneer -> Ascendant -> Preacher -> Apostle)
     final newRank = u.rank;
     if (!u.rankHistory.containsKey(newRank)) {
       u.rankHistory[newRank] = DateHelper.todayString();
@@ -131,7 +131,7 @@ class UserController extends GetxController {
       }
     }
 
-    // 5. Update Growth Snapshot for today
+    // 5. Catat titik grafik pertumbuhan hari ini buat grafik di tab Sejarah
     final today = DateHelper.todayString();
     u.growthSnapshots[today] = u.totalStats;
 
@@ -185,6 +185,7 @@ class UserController extends GetxController {
     final u = user.value;
     if (u == null) return;
 
+    // Penalti bolos 3 hari: kurangi 5 poin di setiap atribut stat
     final penalized = StatCalculator.applyThreeDayPenalty(u.statsMap);
     u.strength = penalized['STR'] ?? 0;
     u.endurance = penalized['END'] ?? 0;
@@ -193,10 +194,11 @@ class UserController extends GetxController {
     u.willpower = penalized['WIL'] ?? 0;
     u.appearance = penalized['APP'] ?? 0;
 
+    // Reset HP balik ke 100 dan streak diputus jadi 0
     u.hp = 100;
     u.streakDays = 0;
 
-    // Update today's growth snapshot with penalized stats
+    // Update snapshot grafik pertumbuhan hari ini dengan stat yang sudah dipotong
     final today = DateHelper.todayString();
     u.growthSnapshots[today] = u.totalStats;
 

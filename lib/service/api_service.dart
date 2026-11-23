@@ -56,6 +56,7 @@ class ApiService {
   Future<QuoteModel> fetchDailyQuote({http.Client? client}) async {
     final httpClient = client ?? http.Client();
     try {
+      // Panggil REST API DummyJSON quote motivasi acak dengan batas timeout 8 detik
       final response = await httpClient
           .get(Uri.parse(quoteApiUrl))
           .timeout(timeoutDuration);
@@ -65,9 +66,11 @@ class ApiService {
             jsonDecode(response.body) as Map<String, dynamic>;
         return QuoteModel.fromJson(data);
       } else {
+        // Kalau server mengembalikan selain 200 OK, pakai quote cadangan offline
         return getRandomFallbackQuote();
       }
     } catch (_) {
+      // Kalau HP offline atau kena timeout 8 detik, otomatis pakai quote offline
       return getRandomFallbackQuote();
     } finally {
       if (client == null) {
@@ -85,6 +88,7 @@ class ApiService {
   }) async {
     final httpClient = client ?? http.Client();
     try {
+      // Panggil REST API Open-Meteo cuaca publik gratis tanpa butuh API key
       final uri = Uri.parse(
         '$weatherApiBaseUrl?latitude=$latitude&longitude=$longitude&current_weather=true',
       );
@@ -95,9 +99,11 @@ class ApiService {
             jsonDecode(response.body) as Map<String, dynamic>;
         return WeatherModel.fromJson(data);
       } else {
+        // Kalau respons bukan 200 OK, pakai data cuaca default
         return WeatherModel.fallback();
       }
     } catch (_) {
+      // Kalau sinyal hilang / offline, tampilkan cuaca offline (26°C Berawan) biar gak error
       return WeatherModel.fallback();
     } finally {
       if (client == null) {

@@ -102,12 +102,14 @@ class QuestController extends GetxController {
     _updateCountdownString();
     if (Get.testMode) return;
     _countdownTimer?.cancel();
+    // Update sisa waktu mundur setiap detik
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdownString();
     });
   }
 
   void _updateCountdownString() {
+    // Hitung selisih waktu dari detik sekarang menuju jam 00:00 tengah malam
     final now = DateTime.now();
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final remaining = tomorrow.difference(now);
@@ -126,7 +128,7 @@ class QuestController extends GetxController {
     final today = DateHelper.todayString();
 
     if (user.lastActiveDate.isEmpty) {
-      // First launch or fresh registration
+      // User baru registrasi atau pertama kali buka app
       user.lastActiveDate = today;
       final initialExercises = [
         GameConfig.workoutExercises[0],
@@ -143,10 +145,11 @@ class QuestController extends GetxController {
       return;
     }
 
+    // Hitung berapa hari user gak login / selisih hari dari terakhir aktif
     final deltaDays = DateHelper.daysBetween(user.lastActiveDate, today);
 
     if (deltaDays == 0) {
-      // Same day login: load today's state
+      // Masih di hari yang sama: langsung buka quest harian yang sudah ada
       var state =
           HiveService.dailyQuestStatesBox.get('${user.username}_$today');
       if (state == null) {
@@ -162,8 +165,9 @@ class QuestController extends GetxController {
       }
       dailyQuest.value = state;
     } else {
-      // deltaDays >= 1: evaluate streak, HP deductions, and inactivity penalty
+      // deltaDays >= 1: ganti hari, evaluasi streak, pengurangan HP, atau penalti
       if (deltaDays == 1) {
+        // Cek apakah kemarin nyelesaiin minimal 1 quest
         final yesterday = DateHelper.formatDate(
             DateHelper.parseDate(today).subtract(const Duration(days: 1)));
         final yesterdayState =
@@ -176,29 +180,30 @@ class QuestController extends GetxController {
           if (user.streakDays > user.longestStreak) {
             user.longestStreak = user.streakDays;
           }
-          // Daily Login reward: +1 WIL
+          // Reward login berturut-turut: +1 Willpower (WIL)
           user.willpower += 1;
-          // Milestone reward: every 7 days streak gives bonus +1 WIL
+          // Bonus tambahan setiap streak 7 hari berturut-turut
           if (user.streakDays > 0 && user.streakDays % 7 == 0) {
             user.willpower += 1;
           }
         } else {
+          // Kemarin gak ada quest beres, streak hangus jadi 0
           user.streakDays = 0;
         }
       } else if (deltaDays == 2) {
-        // Missed 1 full day: -34 HP, streak broken
+        // Bolos 1 hari penuh: HP dipotong 34 poin, streak putus
         user.hp = (user.hp - GameConfig.dailyHpDeduction).clamp(0, 100);
         user.streakDays = 0;
         hasHpWarning.value = true;
         hpDeductionAmount = GameConfig.dailyHpDeduction;
       } else {
-        // deltaDays >= 3: 3 consecutive days missed -> Trigger 3-Day Inactivity Penalty
+        // Bolos 3 hari atau lebih: picu penalti berat (HP habis, turun rank, stat minus)
         user.hp = 0;
         await UserController.to.applyThreeDayPenalty();
         hasPenaltyNotice.value = true;
       }
 
-      // Rotate 2 workout exercises distinct from yesterday's workout
+      // Rotasi 2 jenis gerakan workout agar beda dari gerakan kemarin
       final List<String> previousExercises = dailyQuest.value?.workoutExercises ??
           [GameConfig.workoutExercises[0], GameConfig.workoutExercises[2]];
 
@@ -215,7 +220,7 @@ class QuestController extends GetxController {
         ]);
       }
 
-      // Create new DailyQuestStateModel for today
+      // Buat state quest baru untuk hari ini di Hive
       final newState = DailyQuestStateModel(
         username: user.username,
         date: today,
@@ -229,7 +234,7 @@ class QuestController extends GetxController {
       await HiveService.dailyQuestStatesBox.put('${user.username}_$today', newState);
       dailyQuest.value = newState;
 
-      // Reset isChecked for all grooming items belonging to this user
+      // Reset centang grooming harian milik user
       for (final item in HiveService.groomingItemsBox.values) {
         if (item.username == user.username && item.isChecked) {
           item.isChecked = false;
@@ -237,7 +242,7 @@ class QuestController extends GetxController {
         }
       }
 
-      // Record growth trajectory snapshot and update lastActiveDate
+      // Simpan riwayat grafik pertumbuhan hari ini dan perbarui tanggal terakhir aktif
       user.growthSnapshots[today] = user.totalStats;
       user.lastActiveDate = today;
       await UserController.to.saveUser();
@@ -516,7 +521,7 @@ class QuestController extends GetxController {
       statRewards: statRewards,
     );
 
-    // Save QuestLogModel to Hive
+    // Simpan riwayat quest ke Hive questLogsBox buat arsip dan tab Sejarah
     final log = QuestLogModel(
       id: '${user.username}_${DateTime.now().millisecondsSinceEpoch}',
       username: user.username,
@@ -534,19 +539,19 @@ class QuestController extends GetxController {
     );
     await HiveService.questLogsBox.put(log.id, log);
 
-    // Refresh StatsController real-time aggregations
+    // Refresh data statistik di tab Sejarah & Attributes secara real-time
     if (Get.isRegistered<StatsController>()) {
       StatsController.to.refreshStats();
     }
 
-    // Evaluate Achievements
+    // Cek apakah ada badge achievement baru yang terbuka
     final userLogs = HiveService.questLogsBox.values
         .where((l) => l.username == user.username)
         .toList();
     final newAchievements =
         await UserController.to.checkAchievements(userLogs);
 
-    // Trigger Immediate Quest Completed Notification
+    // Tampilkan notifikasi lokal di status bar HP kalau quest berhasil selesai
     await NotificationService.showQuestCompleted(
       questTitle: title,
       expGained: expGained,

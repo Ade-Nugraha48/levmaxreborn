@@ -13,31 +13,31 @@ class SessionService {
   static const String _keyIsDemoMode = 'isDemoMode';
   static const String _keySkipRestTimer = 'skipRestTimer';
 
-  /// Initializes SharedPreferences instance
+  /// Inisialisasi SharedPreferences saat pertama kali app start di main.dart
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  /// Whether user session is currently logged in
+  // Cek apakah user sudah login di perangkat ini
   static bool get isLoggedIn => _prefs?.getBool(_keyIsLoggedIn) ?? false;
   static Future<void> setIsLoggedIn(bool value) async {
     await _prefs?.setBool(_keyIsLoggedIn, value);
   }
 
-  /// Active username lookup key for Hive
+  // Simpan & ambil username yang sedang aktif digunakan
   static String get activeUsername => _prefs?.getString(_keyActiveUsername) ?? '';
   static Future<void> setActiveUsername(String value) async {
     await _prefs?.setString(_keyActiveUsername, value);
   }
 
-  /// Toggle for Scheduled Daily Notification (19:00)
+  // Pengaturan notifikasi harian jam 19:00 malam
   static bool get dailyReminderEnabled =>
       _prefs?.getBool(_keyDailyReminderEnabled) ?? true;
   static Future<void> setDailyReminderEnabled(bool value) async {
     await _prefs?.setBool(_keyDailyReminderEnabled, value);
   }
 
-  /// Toggle for Developer Demo Console
+  // Mode developer demo untuk mempermudah pengujian saat presentasi
   static bool get isDemoMode => _prefs?.getBool(_keyIsDemoMode) ?? false;
   static Future<void> setIsDemoMode(bool value) async {
     await _prefs?.setBool(_keyIsDemoMode, value);

@@ -60,6 +60,7 @@ class AuthController extends GetxController {
     final username = usernameController.text.trim();
     final password = passwordController.text;
 
+    // Cek input gak boleh kosong biar gak buang-buang query ke Hive
     if (username.isEmpty || password.isEmpty) {
       errorMessage.value = 'ENTER CREDENTIALS TO ACCESS SYSTEM';
       _showErrorSnackbar(errorMessage.value);
@@ -68,6 +69,7 @@ class AuthController extends GetxController {
 
     isLoading.value = true;
     try {
+      // Cari data user di database Hive lokal berdasarkan username yang diketik
       final user = HiveService.usersBox.get(username);
       if (user == null || user.password != password) {
         errorMessage.value = 'ACCESS DENIED: INVALID CREDENTIALS';
@@ -75,7 +77,7 @@ class AuthController extends GetxController {
         return false;
       }
 
-      // Valid session
+      // Simpan status login ke SharedPreferences biar sesi tetap nyantol pas app ditutup
       await SessionService.setIsLoggedIn(true);
       await SessionService.setActiveUsername(username);
 
@@ -99,7 +101,7 @@ class AuthController extends GetxController {
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
-    // 1. Username validation
+    // 1. Username validation - wajib diisi dan gak boleh kembar sama akun yang udah ada
     if (username.isEmpty) {
       errorMessage.value = 'IDENTIFIER CANNOT BE EMPTY';
       _showErrorSnackbar(errorMessage.value);
@@ -112,21 +114,21 @@ class AuthController extends GetxController {
       return false;
     }
 
-    // 2. Password length validation
+    // 2. Password minimal 6 karakter sesuai standar keamanan
     if (password.length < 6) {
       errorMessage.value = 'PASSWORD MUST BE AT LEAST 6 CHARACTERS';
       _showErrorSnackbar(errorMessage.value);
       return false;
     }
 
-    // 3. Confirm password validation
+    // 3. Konfirmasi password harus sama persis
     if (password != confirmPassword) {
       errorMessage.value = 'CIPHER CONFIRMATION DOES NOT MATCH';
       _showErrorSnackbar(errorMessage.value);
       return false;
     }
 
-    // 4. Mandatory Consent Checkbox
+    // 4. Syarat ketentuan protokol harus dicentang
     if (!consentAgreed.value) {
       errorMessage.value = 'SOVEREIGN PROTOCOL COVENANTS MUST BE ACCEPTED';
       _showErrorSnackbar(errorMessage.value);
@@ -137,7 +139,7 @@ class AuthController extends GetxController {
     try {
       final today = DateHelper.todayString();
 
-      // Create new UserModel
+      // Bikin objek akun baru UserModel dengan stat awal (level 1, rank Novice)
       final newUser = UserModel(
         username: username,
         password: password,
@@ -159,10 +161,10 @@ class AuthController extends GetxController {
         growthSnapshots: {today: 0},
       );
 
-      // Save user to Hive usersBox
+      // Simpan data akun baru ke Hive usersBox
       await HiveService.usersBox.put(username, newUser);
 
-      // Seed 5 default grooming items
+      // Isi 5 checklist grooming bawaan buat akun baru biar fiturnya langsung ada isi
       for (int i = 0; i < GameConfig.defaultGroomingItems.length; i++) {
         final title = GameConfig.defaultGroomingItems[i];
         final item = GroomingItemModel(
@@ -175,7 +177,7 @@ class AuthController extends GetxController {
         await HiveService.groomingItemsBox.add(item);
       }
 
-      // Do not auto-login; ensure session is logged out so user enters login page
+      // Jangan langsung masuk ke home; suruh user buat login manual dulu
       await SessionService.setIsLoggedIn(false);
       await SessionService.setActiveUsername('');
 
@@ -206,6 +208,7 @@ class AuthController extends GetxController {
 
   /// Handles User Logout
   Future<void> logout() async {
+    // Hapus sesi di SharedPreferences dan kosongkan user aktif di memory
     await SessionService.clearSession();
     UserController.to.user.value = null;
     clearInputs();

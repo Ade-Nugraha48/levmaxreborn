@@ -209,14 +209,15 @@ class CardioController extends GetxController {
   void _startPositionStream() {
     _positionSubscription?.cancel();
     try {
+      // Dengarkan perubahan titik GPS HP setiap pergerakan minimal 5 meter
       _positionSubscription = LocationService.getPositionStream(distanceFilter: 5)
           .listen((position) {
         if (!isTracking.value || isPaused.value) return;
 
-        // Anti-cheat verification: max 24 km/h
+        // Filter anti-cheat: tolak koordinat kalau kecepatan di atas 24 km/jam (curiga naik kendaraan)
         if (!LocationService.isValidSpeed(position.speed)) {
           antiCheatWarning.value = true;
-          return; // Ignore waypoint exceeding 24 km/h (motor/car speed)
+          return; // Abaikan titik GPS yang melebihi batas lari manusia
         }
 
         final newPoint = LatLng(position.latitude, position.longitude);
@@ -229,6 +230,7 @@ class CardioController extends GetxController {
         }
 
         final lastPoint = routePoints.last;
+        // Hitung jarak antara titik sebelumnya ke titik baru dengan rumus geodetic
         final stepDistance = LocationService.distanceBetween(
           lastPoint.latitude,
           lastPoint.longitude,
@@ -236,14 +238,14 @@ class CardioController extends GetxController {
           newPoint.longitude,
         );
 
-        // Filter micro-jitter (< 1 meter)
+        // Abaikan goyangan GPS kecil (< 1 meter) biar gak nambah jarak palsu saat diam
         if (stepDistance >= 1.0) {
           final now = DateTime.now();
           final elapsed = _lastWaypointTime != null
               ? now.difference(_lastWaypointTime!).inSeconds
               : 1;
 
-          // Step interval anti-cheat verification
+          // Verifikasi anti-cheat kecepatan per step interval
           if (LocationService.isValidStep(
             distanceMeters: stepDistance,
             elapsedSeconds: elapsed,
