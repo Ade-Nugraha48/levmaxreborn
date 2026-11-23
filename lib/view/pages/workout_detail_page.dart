@@ -167,6 +167,9 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         shape: RoundedRectangleBorder(
           side: const BorderSide(color: AppColors.secondary, width: 1.5),
           borderRadius: BorderRadius.circular(4),
@@ -227,10 +230,12 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'TOTAL VOLUME',
-                        style: AppTextStyles.labelMonoSmall(
-                          color: AppColors.textSecondary,
+                      Expanded(
+                        child: Text(
+                          'TOTAL VOLUME',
+                          style: AppTextStyles.labelMonoSmall(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                       Text(
@@ -246,10 +251,12 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'CADENCE STATUS',
-                        style: AppTextStyles.labelMonoSmall(
-                          color: AppColors.textSecondary,
+                      Expanded(
+                        child: Text(
+                          'CADENCE STATUS',
+                          style: AppTextStyles.labelMonoSmall(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                       Text(
@@ -265,13 +272,16 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'REWARDS ACQUIRED',
-                        style: AppTextStyles.labelMonoSmall(
-                          color: AppColors.textSecondary,
+                      Expanded(
+                        child: Text(
+                          'STAT REWARDS',
+                          style: AppTextStyles.labelMonoSmall(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             '+2 STR',
@@ -293,20 +303,28 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                               color: AppColors.end,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            '·',
-                            style: TextStyle(color: AppColors.textSecondary),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '+${result.expGained} EXP',
-                            style: AppTextStyles.telemetryDotGothic(
-                              fontSize: 12,
-                              color: AppColors.secondary,
-                            ),
-                          ),
                         ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'EXP GAINED',
+                          style: AppTextStyles.labelMonoSmall(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '+${result.expGained} EXP',
+                        style: AppTextStyles.telemetryDotGothic(
+                          fontSize: 12,
+                          color: AppColors.secondary,
+                        ),
                       ),
                     ],
                   ),
@@ -314,7 +332,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
                         color:
                             AppColors.highlightYellow.withValues(alpha: 0.15),
