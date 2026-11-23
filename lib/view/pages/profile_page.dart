@@ -484,9 +484,32 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: Column(
                 children: [
-                  // Row 1: Penalty & Stats Boost
+                  // Row 1: Penalty Simulations (-34 HP & +3 Days)
                   Row(
                     children: [
+                      Expanded(
+                        child: _buildDevButton(
+                          label: '-34 HP (MISSED 1 DAY)',
+                          color: AppColors.errorRed,
+                          onPressed: () async {
+                            final currentHp = _userController.currentUser?.hp ?? 100;
+                            await _userController.deductHp(34);
+                            final newHp = _userController.currentUser?.hp ?? 100;
+                            Get.snackbar(
+                              'SIMULATION: MISSED DAY',
+                              newHp == 100
+                                  ? 'HP reached 0. 3-Day Inactivity Penalty applied & HP restored to 100.'
+                                  : 'Missed 1 day protocol. -34 HP deducted ($currentHp -> $newHp HP).',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.surfaceElevated,
+                              colorText: AppColors.textPrimary,
+                              borderColor: AppColors.errorRed,
+                              borderWidth: 1,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildDevButton(
                           label: '+3 DAYS PENALTY',
@@ -505,7 +528,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Row 2: Stats & Level Up Boost
+                  Row(
+                    children: [
                       Expanded(
                         child: _buildDevButton(
                           label: '+50 ALL STATS',
@@ -524,14 +554,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Row 2: EXP Level Up & Cardio Simulation
-                  Row(
-                    children: [
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildDevButton(
                           label: '+300 EXP (LEVEL UP)',
@@ -552,7 +575,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Row 3: Cardio Simulation
+                  Row(
+                    children: [
                       Expanded(
                         child: _buildDevButton(
                           label: 'SIMULATE CARDIO +500M',

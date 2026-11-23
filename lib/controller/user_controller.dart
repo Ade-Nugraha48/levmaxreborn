@@ -208,6 +208,22 @@ class UserController extends GetxController {
     }
   }
 
+  /// Deducts HP (Developer Demo Mode simulation for 1 missed day: -34 HP)
+  Future<void> deductHp(int amount) async {
+    final u = user.value;
+    if (u == null) return;
+
+    final newHp = (u.hp - amount).clamp(0, 100);
+    if (newHp <= 0) {
+      await applyThreeDayPenalty();
+    } else {
+      u.hp = newHp;
+      u.streakDays = 0;
+      await saveUser();
+      user.refresh();
+    }
+  }
+
   /// Adds EXP directly (e.g. for Developer Demo Mode)
   Future<LevelUpResult> addExp(int expToAdd) async {
     return applyQuestReward(expGained: expToAdd);

@@ -196,6 +196,34 @@ void main() {
       expect(u.appearance, equals(0));
     });
 
+    test('deductHp reduces HP and triggers penalty when hitting 0', () async {
+      final user = UserModel(
+        username: 'hp_test_user',
+        password: 'password123',
+        lastActiveDate: '2026-11-22',
+        createdAt: DateTime.now(),
+        hp: 100,
+        streakDays: 5,
+        strength: 55, // Strata C (50-69)
+      );
+      await Hive.box<UserModel>(HiveBoxes.users).put(user.username, user);
+      userController.loadUser('hp_test_user');
+
+      // 1. Deduct 34 HP (Missed 1 day)
+      await userController.deductHp(34);
+      expect(userController.currentUser!.hp, equals(66));
+      expect(userController.currentUser!.streakDays, equals(0));
+
+      // 2. Deduct 34 HP again (Missed 2nd day)
+      await userController.deductHp(34);
+      expect(userController.currentUser!.hp, equals(32));
+
+      // 3. Deduct 34 HP again (Hits 0 HP -> triggers 3-day penalty, drops strata to D 49, restores HP to 100)
+      await userController.deductHp(34);
+      expect(userController.currentUser!.hp, equals(100));
+      expect(userController.currentUser!.strength, equals(49));
+    });
+
     test('+50 All Stats increases all 6 attributes and triggers rank recalculation',
         () async {
       final user = UserModel(
